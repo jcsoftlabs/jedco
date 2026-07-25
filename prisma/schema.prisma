@@ -1,0 +1,456 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  SUPERVISEUR
+  TECHNICIEN
+}
+
+enum TypeClient {
+  PARTICULIER
+  ENTREPRISE
+  INSTITUTION
+  ONG
+}
+
+enum TypeContrat {
+  MENSUEL
+  TRIMESTRIEL
+  ANNUEL
+  PONCTUEL
+}
+
+enum StatutContrat {
+  ACTIF
+  EXPIRE
+  SUSPENDU
+  RESILIE
+}
+
+enum TypeService {
+  VIDANGE
+  COLLECTE
+  TOILETTE_MOBILE
+  PEST_CONTROL
+  NETTOYAGE
+  AUTRE
+}
+
+enum StatutIntervention {
+  EN_ATTENTE
+  PLANIFIE
+  EN_COURS
+  COMPLETE
+  ANNULE
+}
+
+enum Priorite {
+  NORMALE
+  URGENTE
+}
+
+enum TypeVehicule {
+  CAMION_ASPIRATEUR
+  CAMION_COLLECTE
+  UTILITAIRE
+}
+
+enum StatutVehicule {
+  DISPONIBLE
+  EN_SERVICE
+  EN_MAINTENANCE
+  HORS_SERVICE
+}
+
+enum StatutToilette {
+  DISPONIBLE
+  LOUEE
+  EN_MAINTENANCE
+}
+
+enum StatutFacture {
+  EN_ATTENTE
+  PAYEE
+  PARTIELLEMENT_PAYEE
+  EN_RETARD
+  ANNULEE
+}
+
+enum ModePaiement {
+  CASH
+  VIREMENT
+  CHEQUE
+}
+
+// ─── AUTH & AUDIT (nouveau — §1.6, §1.10) ────────────────────────────────────
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  nom          String
+  prenom       String
+  telephone    String?
+  role         Role        @default(TECHNICIEN)
+  actif        Boolean     @default(true)
+  technicien   Technicien?
+  sessions     Session[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+// Sessions révocables en base — corrige §1.6 : sans cette table, /api/auth/logout
+// ne fait rien et un JWT reste valide jusqu'à expiration même après déconnexion
+// ou changement de mot de passe. Le token brut n'est jamais stocké, seul son hash.
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Journal d'audit — alimente le "feed d'activité récente" du dashboard (Phase 5)
+// et trace chaque transition de statut d'intervention, paiement, etc.
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ─── CLIENTS & CONTRATS ──────────────────────────────────────────────────────
+
+model Client {
+  id            String           @id @default(cuid())
+  code          String           @unique // JED-0001 — généré via séquence PostgreSQL, voir §1.4
+  nom           String
+  type          TypeClient       @default(PARTICULIER)
+  telephone     String
+  email         String?
+  adresse       String?
+  ville         String           @default("Port-au-Prince")
+  notes         String?
+  actif         Boolean          @default(true)
+  contrats      Contrat[]
+  interventions Intervention[]
+  factures      Facture[]
+  toilettes     ToiletteMobile[]
+  deletedAt     DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([ville, actif])
+}
+
+model Contrat {
+  id                 String         @id @default(cuid())
+  reference          String         @unique // CTR-2026-0001
+  clientId           String
+  client             Client         @relation(fields: [clientId], references: [id])
+  type               TypeContrat
+  services           TypeService[]
+  // Montant en centimes HTG — BigInt (§1.7) : un INTEGER Postgres plafonne à
+  // ~21,4M HTG, insuffisant pour un contrat municipal pluriannuel.
+  // Pas de montantUSD stocké (§1.11) : la gourde est volatile, un montant USD
+  // dérivé et conservé fausserait l'historique. L'affichage USD se calcule à la
+  // volée depuis Config["TAUX_USD_HTG"] ; seule la Facture fige un taux figé.
+  montantHTG         BigInt
+  dateDebut          DateTime
+  dateFin            DateTime
+  statut             StatutContrat  @default(ACTIF)
+  renouvellementAuto Boolean        @default(false)
+  interventions      Intervention[]
+  factures           Facture[]
+  deletedAt          DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([clientId, statut, dateFin])
+}
+
+// ─── OPÉRATIONS ──────────────────────────────────────────────────────────────
+
+model Intervention {
+  id               String                   @id @default(cuid())
+  reference        String                   @unique // INT-2026-0001
+  clientId         String
+  client           Client                   @relation(fields: [clientId], references: [id])
+  contratId        String?
+  contrat          Contrat?                 @relation(fields: [contratId], references: [id])
+  type             TypeService
+  description      String?
+  adresse          String
+  ville            String
+  statut           StatutIntervention       @default(EN_ATTENTE)
+  priorite         Priorite                 @default(NORMALE)
+  datePlanifiee    DateTime?
+  // Durée estimée en minutes — sert de base à la plage horaire utilisée par la
+  // contrainte d'exclusion PostgreSQL anti double-booking ajoutée en Phase 1
+  // (migration SQL manuelle ; Prisma n'exprime pas EXCLUDE USING gist). Voir §1.3.
+  dureeEstimeeMin  Int                      @default(60)
+  dateExecution    DateTime?
+  techniciens      InterventionTechnicien[]
+  vehiculeId       String?
+  vehicule         Vehicule?                @relation(fields: [vehiculeId], references: [id])
+  rapportExecution Json?
+  photos           Media[]
+  facture          Facture?
+  deletedAt        DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([clientId, statut, datePlanifiee])
+  @@index([vehiculeId, datePlanifiee])
+}
+
+// Table de jonction explicite (plutôt qu'un m2m implicite Prisma) : c'est sur
+// cette table que la contrainte d'exclusion anti double-booking technicien
+// (§1.3, Phase 1) sera ajoutée, et elle peut porter des champs futurs (rôle
+// sur l'intervention, heures) sans migration de rupture.
+model InterventionTechnicien {
+  id             String       @id @default(cuid())
+  interventionId String
+  intervention   Intervention @relation(fields: [interventionId], references: [id])
+  technicienId   String
+  technicien     Technicien   @relation(fields: [technicienId], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([interventionId, technicienId])
+  @@index([technicienId])
+}
+
+model Technicien {
+  id             String                   @id @default(cuid())
+  userId         String                   @unique
+  user           User                     @relation(fields: [userId], references: [id])
+  matricule      String                   @unique // TECH-001
+  specialites    TypeService[]
+  zonesAssignees String[]
+  disponible     Boolean                  @default(true)
+  interventions  InterventionTechnicien[]
+  presences      Presence[]
+  deletedAt      DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+}
+
+model Presence {
+  id           String     @id @default(cuid())
+  technicienId String
+  technicien   Technicien @relation(fields: [technicienId], references: [id])
+  // @db.Date (pas DateTime) — §1.8 : avec une composante horaire, la contrainte
+  // unique(technicienId, date) ne bloque rien, deux saisies le même jour à des
+  // heures différentes créent deux lignes.
+  date         DateTime   @db.Date
+  present      Boolean    @default(true)
+  notes        String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([technicienId, date])
+  @@index([technicienId, date])
+}
+
+model Vehicule {
+  id                String         @id @default(cuid())
+  immatriculation   String         @unique
+  marque            String
+  modele            String
+  type              TypeVehicule
+  statut            StatutVehicule @default(DISPONIBLE)
+  kilometrage       Int            @default(0)
+  dernierEntretien  DateTime?
+  prochainEntretien DateTime?
+  notes             String?
+  interventions     Intervention[]
+  deletedAt         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model ToiletteMobile {
+  id                   String         @id @default(cuid())
+  code                 String         @unique // TLT-001
+  statut               StatutToilette @default(DISPONIBLE)
+  localisationActuelle String?
+  clientId             String?
+  client               Client?        @relation(fields: [clientId], references: [id])
+  dateDebutLocation    DateTime?
+  dateFinLocation      DateTime?
+  notes                String?
+  deletedAt            DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}
+
+// ─── MÉDIAS (nouveau — §1.10) ────────────────────────────────────────────────
+
+// Photos de rapport d'intervention ET photos de la galerie publique.
+// Les fichiers eux-mêmes vivent sur R2/S3 (§1.2) — cette table ne stocke que
+// l'URL et les métadonnées.
+model Media {
+  id             String        @id @default(cuid())
+  url            String
+  type           TypeService?
+  interventionId String?
+  intervention   Intervention? @relation(fields: [interventionId], references: [id])
+  legende        String?
+  publieGalerie  Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+
+  @@index([publieGalerie, type])
+}
+
+// ─── FACTURATION & FINANCE ───────────────────────────────────────────────────
+
+model Facture {
+  id              String         @id @default(cuid())
+  reference       String         @unique // FAC-2026-0001
+  clientId        String
+  client          Client         @relation(fields: [clientId], references: [id])
+  interventionId  String?        @unique
+  intervention    Intervention?  @relation(fields: [interventionId], references: [id])
+  contratId       String?
+  contrat         Contrat?       @relation(fields: [contratId], references: [id])
+  // Période "2026-07" pour une facture récurrente de contrat mensuel — combinée
+  // à contratId dans la contrainte unique ci-dessous pour garantir l'idempotence
+  // du cron de facturation (§1.9) : impossible de générer deux factures pour le
+  // même contrat sur la même période, même si le cron tourne en double.
+  periode         String?
+  lignes          LigneFacture[]
+  montantHTG      BigInt
+  taxeHTG         BigInt         @default(0)
+  totalHTG        BigInt
+  // Taux HTG→USD × 10000, figé au moment de l'émission (§1.11) — jamais
+  // recalculé rétroactivement. Null si la facture n'affiche pas d'équivalent USD.
+  tauxUsdApplique Int?
+  statut          StatutFacture  @default(EN_ATTENTE)
+  modePaiement    ModePaiement?
+  dateEmission    DateTime       @default(now())
+  dateEcheance    DateTime
+  datePaiement    DateTime?
+  notes           String?
+  paiements       Paiement[]
+  deletedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([contratId, periode])
+  @@index([clientId, statut, dateEcheance])
+}
+
+// Remplace le champ Json `lignes` du master prompt v1 (§1.13) : sans lignes
+// réelles, impossible d'agréger "revenus par service" en SQL pour
+// GET /api/factures/stats — il faudrait désérialiser chaque facture en mémoire.
+model LigneFacture {
+  id              String       @id @default(cuid())
+  factureId       String
+  facture         Facture      @relation(fields: [factureId], references: [id], onDelete: Cascade)
+  description     String
+  service         TypeService?
+  quantite        Int          @default(1)
+  prixUnitaireHTG BigInt
+  totalHTG        BigInt
+  ordre           Int          @default(0)
+}
+
+model Paiement {
+  id             String       @id @default(cuid())
+  factureId      String
+  facture        Facture      @relation(fields: [factureId], references: [id])
+  montantHTG     BigInt
+  mode           ModePaiement
+  reference      String?
+  // Fournie par le client (ex: hash du formulaire soumis) pour dédupliquer les
+  // retries réseau et double-clics (§1.5) — un INSERT avec la même clé échoue
+  // proprement au lieu de créer un second versement.
+  idempotencyKey String       @unique
+  datePaiement   DateTime     @default(now())
+  createdBy      String
+  createdAt      DateTime     @default(now())
+}
+
+// ─── DEMANDES PUBLIQUES ──────────────────────────────────────────────────────
+
+model DemandeDevis {
+  id        String      @id @default(cuid())
+  nom       String
+  telephone String
+  email     String?
+  service   TypeService
+  ville     String
+  message   String?
+  traite    Boolean     @default(false)
+  createdAt DateTime    @default(now())
+}
+
+model RendezVous {
+  id         String      @id @default(cuid())
+  nom        String
+  telephone  String
+  email      String?
+  service    TypeService
+  ville      String
+  adresse    String?
+  dateVoulue DateTime
+  message    String?
+  statut     String      @default("EN_ATTENTE")
+  createdAt  DateTime    @default(now())
+}
+
+// ─── CONTENU DU SITE VITRINE (nouveau — §1.10, Phase 4) ──────────────────────
+
+model Temoignage {
+  id          String   @id @default(cuid())
+  nom         String
+  type        String // libellé libre affiché : "Entreprise — AgroTrans Haiti"
+  note        Int // 1 à 5
+  commentaire String
+  actif       Boolean  @default(true)
+  ordre       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── IA ───────────────────────────────────────────────────────────────────────
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String   @unique @default(cuid())
+  messages  Json[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── CONFIGURATION ────────────────────────────────────────────────────────────
+
+model Config {
+  id        String   @id @default(cuid())
+  cle       String   @unique // ex: "TAUX_USD_HTG"
+  valeur    String
+  updatedAt DateTime @updatedAt
+}

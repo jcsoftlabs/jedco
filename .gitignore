@@ -1,0 +1,9 @@
+.vercel
+node_modules
+.next
+.env
+.env*.local
+
+/app/generated/prisma
+*.tsbuildinfo
+.claude/settings.local.json

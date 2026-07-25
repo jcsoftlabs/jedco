@@ -1,0 +1,20 @@
+#!/bin/sh
+# Analyse de secrets avant chaque commit local — la clé Anthropic a déjà fuité
+# une fois dans ce projet (index.html.bak, voir JEDCO_PlanImplementation_V1.md
+# §Action immédiate). Ce hook attrape ce genre d'erreur avant le commit, pas
+# après le push.
+#
+# Activation (une fois, par personne) :
+#   git config core.hooksPath .githooks
+#
+# Installation de gitleaks (une fois) :
+#   macOS   : brew install gitleaks
+#   Linux   : voir https://github.com/gitleaks/gitleaks#installing
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "⚠️  gitleaks n'est pas installé — commit autorisé sans analyse de secrets."
+  echo "   Installer avec : brew install gitleaks"
+  exit 0
+fi
+
+gitleaks protect --staged --verbose
