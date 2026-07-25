@@ -1,13 +1,14 @@
 import pino from "pino";
 
 // Logger structuré — jamais de console.log en production (§9 du master
-// prompt). En développement, sortie lisible ; en production, JSON brut
-// consommable par l'outil d'agrégation de logs (Vercel / Sentry).
+// prompt). Toujours en JSON, y compris en développement : le transport
+// pino-pretty spawn un worker thread pour le formatage, qui entre en
+// conflit avec le runtime de threads de Next.js dev et fait planter tout
+// le process serveur ("the worker has exited") — vérifié empiriquement sur
+// ce projet en déclenchant volontairement une erreur de contrainte
+// d'exclusion PostgreSQL (§1.3). Le JSON reste lisible dans le terminal.
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? "info",
-  ...(process.env.NODE_ENV !== "production"
-    ? { transport: { target: "pino-pretty", options: { colorize: true } } }
-    : {}),
 });
 
 export function enfant(bindings: Record<string, unknown>) {
