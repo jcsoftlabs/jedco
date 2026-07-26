@@ -24,13 +24,20 @@ export default function LoginForm() {
       const data = await res.json();
       if (!res.ok || !data.success) {
         setErreur(data.error ?? "Connexion impossible.");
+        setEnvoi(false);
         return;
       }
+      // `envoi` reste volontairement à true : router.push ne s'attend pas, et
+      // le rendu du tableau de bord (plusieurs requêtes en base) prend bien
+      // plus de temps que l'appel d'authentification lui-même. Le remettre à
+      // false ici — ce que faisait un bloc `finally` — éteignait l'indicateur
+      // pile au début de la plus longue attente, donnant l'impression que le
+      // clic n'avait rien déclenché. Le composant est démonté à l'arrivée sur
+      // le tableau de bord, il n'y a donc rien à réinitialiser.
       router.push("/admin");
       router.refresh();
     } catch {
       setErreur("Connexion impossible. Vérifiez votre réseau.");
-    } finally {
       setEnvoi(false);
     }
   }
@@ -45,9 +52,10 @@ export default function LoginForm() {
           id="email"
           type="email"
           required
+          disabled={envoi}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30"
+          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30 disabled:bg-slate-50 disabled:text-slate-500"
         />
       </div>
       <div>
@@ -59,9 +67,10 @@ export default function LoginForm() {
             id="password"
             type={motDePasseVisible ? "text" : "password"}
             required
+            disabled={envoi}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 pr-10 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 pr-10 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30 disabled:bg-slate-50 disabled:text-slate-500"
           />
           <button
             type="button"
@@ -94,8 +103,15 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={envoi}
-        className="w-full rounded-lg bg-jedco px-6 py-3 text-sm font-semibold text-white hover:bg-jedco-light transition disabled:opacity-60"
+        aria-busy={envoi}
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-jedco px-6 py-3 text-sm font-semibold text-white transition hover:bg-jedco-light disabled:cursor-wait disabled:opacity-80"
       >
+        {envoi && (
+          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        )}
         {envoi ? "Connexion…" : "Se connecter"}
       </button>
     </form>
