@@ -15,14 +15,21 @@ const TYPES = [
 export default function NouvelleInterventionForm({
   clients,
   vehicules,
+  techniciens,
 }: {
   clients: { id: string; nom: string; code: string }[];
   vehicules: { id: string; immatriculation: string; marque: string }[];
+  techniciens: { id: string; matricule: string; nom: string; prenom: string; disponible: boolean }[];
 }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
+  const [technicienIds, setTechnicienIds] = useState<string[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+
+  function basculerTechnicien(id: string) {
+    setTechnicienIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,7 +49,7 @@ export default function NouvelleInterventionForm({
       dureeEstimeeMin: Number(fd.get("dureeEstimeeMin")),
       ...(datePlanifiee ? { datePlanifiee: new Date(String(datePlanifiee)).toISOString() } : {}),
       ...(vehiculeId ? { vehiculeId } : {}),
-      technicienIds: [],
+      technicienIds,
     };
 
     try {
@@ -59,6 +66,7 @@ export default function NouvelleInterventionForm({
         setErreur(data.error ?? "Erreur lors de la création");
         return;
       }
+      setTechnicienIds([]);
       setOuvert(false);
       router.refresh();
     } catch {
@@ -140,6 +148,35 @@ export default function NouvelleInterventionForm({
           </option>
         ))}
       </select>
+
+      <div>
+        <label className="block text-xs text-slate-500 mb-1">Techniciens assignés</label>
+        <div className="flex flex-wrap gap-2">
+          {techniciens.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => basculerTechnicien(t.id)}
+              title={t.disponible ? undefined : "Marqué indisponible"}
+              className={`text-xs rounded-full border px-2.5 py-1 ${
+                technicienIds.includes(t.id)
+                  ? "border-jedco bg-jedco/10 text-jedco"
+                  : t.disponible
+                    ? "border-slate-300 text-slate-600 hover:bg-slate-50"
+                    : "border-slate-200 text-slate-400"
+              }`}
+            >
+              {t.matricule} — {t.prenom} {t.nom}
+              {!t.disponible && " (indisponible)"}
+            </button>
+          ))}
+          {techniciens.length === 0 && (
+            <p className="text-xs text-slate-400">
+              Aucun technicien enregistré — voir /admin/techniciens.
+            </p>
+          )}
+        </div>
+      </div>
 
       {erreur && (
         <p className="text-sm text-red-600 rounded bg-red-50 border border-red-200 px-3 py-2">{erreur}</p>

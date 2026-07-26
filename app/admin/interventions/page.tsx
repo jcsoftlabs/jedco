@@ -3,6 +3,7 @@ import { utilisateurCourant } from "@/lib/auth/current-user";
 import AdminHeader from "../AdminHeader";
 import { listerInterventions } from "@/lib/services/interventions";
 import { listerClients } from "@/lib/services/clients";
+import { listerTechniciens } from "@/lib/services/techniciens";
 import { prisma } from "@/lib/db";
 import NouvelleInterventionForm from "./NouvelleInterventionForm";
 import NouveauVehiculeForm from "./NouveauVehiculeForm";
@@ -12,10 +13,11 @@ export default async function InterventionsPage() {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
 
-  const [{ data: interventions }, { data: clients }, vehicules] = await Promise.all([
+  const [{ data: interventions }, { data: clients }, vehicules, techniciens] = await Promise.all([
     listerInterventions({ page: 1, limit: 50 }, user),
     listerClients({ page: 1, limit: 200 }),
     prisma.vehicule.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" } }),
+    listerTechniciens(),
   ]);
 
   return (
@@ -32,6 +34,13 @@ export default async function InterventionsPage() {
           <NouvelleInterventionForm
             clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
             vehicules={vehicules.map((v) => ({ id: v.id, immatriculation: v.immatriculation, marque: v.marque }))}
+            techniciens={techniciens.map((t) => ({
+              id: t.id,
+              matricule: t.matricule,
+              nom: t.user.nom,
+              prenom: t.user.prenom,
+              disponible: t.disponible,
+            }))}
           />
           <NouveauVehiculeForm />
         </div>
