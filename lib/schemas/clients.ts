@@ -12,7 +12,21 @@ export const creerClientSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
-export const modifierClientSchema = creerClientSchema.partial();
+// Sur la création, un champ facultatif vide est simplement omis (voir
+// NouveauClientForm). Sur la modification, il faut distinguer "ne pas
+// toucher ce champ" (absent de la requête) de "effacer la valeur existante"
+// (chaîne vide envoyée depuis le formulaire d'édition, pré-rempli avec la
+// valeur actuelle) — sinon un client qui avait une adresse ne pourrait
+// jamais la retirer. Une chaîne vide est donc convertie en null ici, ce que
+// creerClientSchema.partial() seul ne permettrait pas (null y échouerait la
+// validation email()/string()).
+const champEffacable = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === "" ? null : v), schema.nullable().optional());
+
+export const modifierClientSchema = creerClientSchema.partial().extend({
+  email: champEffacable(z.email()),
+  adresse: champEffacable(z.string().trim().max(500)),
+});
 
 // §1.19 du plan : plafond de pagination pour éviter qu'une liste sans limite
 // ne devienne un vecteur de déni de service accidentel.

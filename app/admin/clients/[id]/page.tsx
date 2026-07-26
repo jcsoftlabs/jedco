@@ -6,6 +6,7 @@ import AdminHeader from "../../AdminHeader";
 import { obtenirClient, statsClient } from "@/lib/services/clients";
 import { prisma } from "@/lib/db";
 import { formatHTG } from "@/lib/money";
+import ModifierClientForm from "./ModifierClientForm";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await utilisateurCourant();
@@ -34,15 +35,20 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <Link href="/admin/clients" className="text-sm text-jedco hover:underline">
           ← Clients
         </Link>
-        <h2 className="mt-2 text-xl font-bold text-jedco-dark">{client.nom}</h2>
-        <p className="text-sm text-slate-500">
-          {client.code} — {client.type} — {client.ville} — {client.telephone}
-        </p>
-        {(client.adresse || client.email) && (
-          <p className="text-sm text-slate-500">
-            {[client.adresse, client.email].filter(Boolean).join(" — ")}
-          </p>
-        )}
+        <h2 className="mt-2 text-xl font-bold text-jedco-dark">
+          {client.nom} <span className="font-normal text-slate-400">({client.code})</span>
+        </h2>
+        <ModifierClientForm
+          client={{
+            id: client.id,
+            nom: client.nom,
+            type: client.type,
+            telephone: client.telephone,
+            ville: client.ville,
+            adresse: client.adresse,
+            email: client.email,
+          }}
+        />
 
         {stats && (
           <div className="mt-4 flex gap-6 text-sm">

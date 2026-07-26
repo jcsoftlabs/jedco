@@ -56,6 +56,26 @@ describe("module Clients (intégration réelle)", () => {
     expect(resultat).toBeNull();
   });
 
+  it("modifierClient efface adresse/email quand le schéma les convertit en null", async () => {
+    const cree = await creerClient({
+      nom: "Avec coordonnées",
+      type: "PARTICULIER",
+      telephone: "1234",
+      ville: "Port-au-Prince",
+      adresse: "12 Rue X",
+      email: "avant@example.com",
+    });
+    idsCrees.push(cree.id);
+
+    // modifierClientSchema.parse({ adresse: "", email: "" }) produirait
+    // exactement { adresse: null, email: null } — voir
+    // lib/schemas/__tests__/clients.test.ts pour cette conversion. On simule
+    // directement le résultat du parse ici pour tester la persistance.
+    const modifie = await modifierClient(cree.id, { adresse: null, email: null });
+    expect(modifie?.adresse).toBeNull();
+    expect(modifie?.email).toBeNull();
+  });
+
   it("le soft delete masque le client des recherches normales (§1.12)", async () => {
     const cree = await creerClient({ nom: "À supprimer", type: "PARTICULIER", telephone: "1234", ville: "Port-au-Prince" });
     idsCrees.push(cree.id);
