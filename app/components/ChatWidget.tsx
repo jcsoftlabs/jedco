@@ -3,7 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "./ChatContext";
 
-type Message = { role: "user" | "assistant"; text: string };
+type Message = { role: "user" | "tiffany" | "agent"; text: string };
+type Statut = "IA" | "EN_ATTENTE_AGENT" | "PRISE_EN_CHARGE" | "FERMEE";
+
+const CLE_SESSION = "jedco.chat.sessionId";
+const INTERVALLE_POLL_MS = 4_000;
+
+function obtenirSessionId(): string {
+  let id = localStorage.getItem(CLE_SESSION);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(CLE_SESSION, id);
+  }
+  return id;
+}
 
 export default function ChatWidget() {
   const { isOpen, showConversation, openChat, closeChat, goToConversation, goToWelcome } = useChat();
@@ -11,15 +24,19 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [statut, setStatut] = useState<Statut>("IA");
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const idsAffichesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (showConversation && !initialized) {
+      sessionIdRef.current = obtenirSessionId();
       setMessages([
         {
-          role: "assistant",
-          text: "Bonjour, je suis l'assistant JEDCO. Décrivez votre situation (zone, urgence, type de problème) et je vous oriente vers le bon service.",
+          role: "tiffany",
+          text: "Bonjour, je suis Tiffany, l'assistante JEDCO. Décrivez votre situation (zone, urgence, type de problème) et je vous oriente vers le bon service.",
         },
       ]);
       setInitialized(true);
@@ -35,6 +52,38 @@ export default function ChatWidget() {
     }
   }, [messages, isSending]);
 
+  // Une fois basculé côté humain, plus aucune réponse ne revient dans l'appel
+  // POST du visiteur (l'agent répond de son côté, à son rythme) — on
+  // interroge donc /api/chat en arrière-plan pour récupérer ses messages.
+  useEffect(() => {
+    if (statut === "IA" || statut === "FERMEE" || !sessionIdRef.current) return;
+
+    async function verifierNouveauxMessages() {
+      try {
+        const res = await fetch(`/api/chat?sessionId=${sessionIdRef.current}`);
+        const data = await res.json();
+        if (!data.success) return;
+
+        setStatut(data.data.statut);
+        for (const m of data.data.messages as { id: string; role: string; contenu: string }[]) {
+          if (idsAffichesRef.current.has(m.id)) continue;
+          idsAffichesRef.current.add(m.id);
+          if (m.role === "AGENT") {
+            setMessages((prev) => [...prev, { role: "agent", text: m.contenu }]);
+          }
+          // VISITEUR et IA sont déjà affichés localement au moment de
+          // l'envoi — marqués comme vus sans être re-rendus, pour ne
+          // jamais les dupliquer une fois que le polling les voit passer.
+        }
+      } catch {
+        // Une vérification manquée n'est pas grave, la suivante rattrapera.
+      }
+    }
+
+    const id = setInterval(verifierNouveauxMessages, INTERVALLE_POLL_MS);
+    return () => clearInterval(id);
+  }, [statut]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
@@ -47,22 +96,39 @@ export default function ChatWidget() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ sessionId: sessionIdRef.current, message: text }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setMessages((prev) => [...prev, { role: "assistant", text: "Erreur : " + (data?.error || "Problème de connexion.") }]);
+      if (!res.ok || !data.success) {
+        setMessages((prev) => [...prev, { role: "tiffany", text: "Erreur : " + (data?.error || "Problème de connexion.") }]);
         return;
       }
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: data.reply || "Je n'ai pas pu générer une recommandation. Veuillez reformuler." },
-      ]);
+      setStatut(data.data.statut);
+      if (data.data.reply) {
+        setMessages((prev) => [...prev, { role: "tiffany", text: data.data.reply }]);
+      }
+      // Amorce le polling avec la liste actuelle comme référence "déjà vue" :
+      // sans ça, le premier sondage réafficherait en double ce qu'on vient
+      // de montrer localement (message du visiteur + réponse de Tiffany).
+      if (data.data.statut !== "IA" && sessionIdRef.current) {
+        const historique = await fetch(`/api/chat?sessionId=${sessionIdRef.current}`).then((r) => r.json());
+        if (historique.success) {
+          for (const m of historique.data.messages as { id: string }[]) {
+            idsAffichesRef.current.add(m.id);
+          }
+        }
+      }
     } catch {
-      setMessages((prev) => [...prev, { role: "assistant", text: "Connexion impossible. Vérifiez votre réseau et réessayez." }]);
+      setMessages((prev) => [...prev, { role: "tiffany", text: "Connexion impossible. Vérifiez votre réseau et réessayez." }]);
     } finally {
       setIsSending(false);
     }
+  }
+
+  function libelleExpediteur(role: Message["role"]): string | null {
+    if (role === "agent") return "Support JEDCO";
+    if (role === "tiffany") return "Tiffany";
+    return null;
   }
 
   return (
@@ -115,25 +181,31 @@ export default function ChatWidget() {
           ) : (
             <div>
               <div className="flex items-center justify-between bg-jedco-dark px-5 py-3 text-white">
-                <p className="text-sm font-medium">Assistant JEDCO</p>
+                <p className="text-sm font-medium">Tiffany · Assistant JEDCO</p>
                 <button onClick={closeChat} type="button" className="rounded-md border border-white/30 px-2 py-1 text-xs text-white/90 hover:bg-white/10">
                   Fermer
                 </button>
               </div>
               <div ref={messagesRef} className="h-72 overflow-y-auto space-y-3 bg-slate-50 p-5">
-                {messages.map((m, i) => (
-                  <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-                    <div
-                      className={
-                        m.role === "user"
-                          ? "max-w-[80%] rounded-lg rounded-br-sm bg-jedco-dark text-white px-4 py-2.5 text-sm"
-                          : "max-w-[80%] rounded-lg rounded-bl-sm bg-white border border-slate-200 text-slate-700 px-4 py-2.5 text-sm"
-                      }
-                    >
-                      {m.text}
+                {messages.map((m, i) => {
+                  const label = libelleExpediteur(m.role);
+                  return (
+                    <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                      <div className="max-w-[80%]">
+                        {label && <p className="mb-0.5 px-1 text-[11px] font-medium text-slate-400">{label}</p>}
+                        <div
+                          className={
+                            m.role === "user"
+                              ? "rounded-lg rounded-br-sm bg-jedco-dark text-white px-4 py-2.5 text-sm"
+                              : "rounded-lg rounded-bl-sm bg-white border border-slate-200 text-slate-700 px-4 py-2.5 text-sm"
+                          }
+                        >
+                          {m.text}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {isSending && (
                   <div className="flex justify-start">
                     <div className="rounded-lg rounded-bl-sm bg-white border border-slate-200 px-4 py-2.5">

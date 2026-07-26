@@ -33,6 +33,7 @@ const I = {
   catalogue: "M4 6h16M4 12h16M4 18h16M2.5 6h.01M2.5 12h.01M2.5 18h.01",
   parametres: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z",
   flotte: "M3 12h13l3 4h2v3h-2M3 12V7a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v5M3 12v7h2M7.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
+  support: "M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 0 1-3.67-.68L3 21l1.87-4.05A7.64 7.64 0 0 1 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z",
 };
 
 const LIENS_ADMIN: Lien[] = [
@@ -49,6 +50,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/catalogue", label: "Catalogue", icone: <Icone d={I.catalogue} /> },
   { href: "/admin/galerie", label: "Galerie", icone: <Icone d={I.galerie} /> },
   { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },
+  { href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> },
   { href: "/admin/parametres", label: "Paramètres", icone: <Icone d={I.parametres} /> },
 ];
 
@@ -58,6 +60,10 @@ const LIENS_TECHNICIEN: Lien[] = [
   { href: "/admin/terrain", label: "Terrain", icone: <Icone d={I.terrain} /> },
   { href: "/admin/interventions", label: "Interventions", icone: <Icone d={I.interventions} /> },
 ];
+
+// Un SUPPORT (réceptionniste) n'a accès qu'au tableau de bord des
+// conversations — jamais aux modules métier (factures, clients, etc.).
+const LIENS_SUPPORT: Lien[] = [{ href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> }];
 
 function Spinner({ className = "" }: { className?: string }) {
   return (
@@ -128,7 +134,8 @@ export default function AdminShell({
     setMobileOuvert(false);
   }, [pathname]);
 
-  const liens = user.role === "TECHNICIEN" ? LIENS_TECHNICIEN : LIENS_ADMIN;
+  const liens =
+    user.role === "TECHNICIEN" ? LIENS_TECHNICIEN : user.role === "SUPPORT" ? LIENS_SUPPORT : LIENS_ADMIN;
   const initiales = `${user.prenom.charAt(0)}${user.nom.charAt(0)}`.toUpperCase();
 
   function estActif(href: string) {
@@ -233,7 +240,7 @@ export default function AdminShell({
           <h1 className="text-base font-semibold text-jedco-dark">
             {liens.find((l) => estActif(l.href))?.label ?? "Backoffice"}
           </h1>
-          {user.role !== "TECHNICIEN" && <NotificationsCloche />}
+          {(user.role === "ADMIN" || user.role === "SUPERVISEUR") && <NotificationsCloche />}
         </header>
         <main className="px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>

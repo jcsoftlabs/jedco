@@ -13,6 +13,10 @@ enum Role {
   ADMIN
   SUPERVISEUR
   TECHNICIEN
+  // Réceptionniste du support client (chat vitrine) — accès limité au
+  // tableau de bord des conversations, jamais aux modules métier (factures,
+  // clients, etc.). Voir lib/auth/rbac.ts.
+  SUPPORT
 }
 
 enum TypeClient {
@@ -143,6 +147,7 @@ model User {
   technicien   Technicien?
   sessions     Session[]
   auditLogs    AuditLog[]
+  conversationsPrisesEnCharge Conversation[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
@@ -592,15 +597,48 @@ model Temoignage {
   updatedAt   DateTime @updatedAt
 }
 
-// ─── IA ───────────────────────────────────────────────────────────────────────
+// ─── IA & SUPPORT ─────────────────────────────────────────────────────────────
 
+enum StatutConversation {
+  IA // Tiffany répond normalement.
+  EN_ATTENTE_AGENT // IA indisponible — en file d'attente pour un humain.
+  PRISE_EN_CHARGE // Un agent SUPPORT a répondu, la conversation lui est assignée.
+  FERMEE
+}
+
+enum RoleMessage {
+  VISITEUR
+  IA
+  AGENT
+}
+
+// Une conversation par sessionId de widget (voir ChatWidget.tsx, stocké en
+// localStorage côté visiteur) — jamais liée à un compte : la vitrine est
+// publique, sans authentification.
 model Conversation {
-  id        String   @id @default(cuid())
-  userId    String?
-  sessionId String   @unique @default(cuid())
-  messages  Json[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String               @id @default(cuid())
+  sessionId String               @unique @default(cuid())
+  statut    StatutConversation   @default(IA)
+  agentId   String?
+  agent     User?                @relation(fields: [agentId], references: [id])
+  nom       String?
+  telephone String?
+  messages  MessageConversation[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([statut, updatedAt])
+}
+
+model MessageConversation {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  role           RoleMessage
+  contenu        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 // ─── CONFIGURATION ────────────────────────────────────────────────────────────
