@@ -3,6 +3,7 @@ import { clientCourant } from "@/lib/auth/current-client";
 import { documentsClient } from "@/lib/services/auth-client";
 import { formatHTG } from "@/lib/money";
 import DeconnexionButton from "./DeconnexionButton";
+import DocumentPreviewButton from "./DocumentPreviewButton";
 
 const COULEUR_STATUT_FACTURE: Record<string, string> = {
   EN_ATTENTE: "bg-slate-100 text-slate-700",
@@ -78,14 +79,10 @@ export default async function EspaceClientPage() {
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">{formatHTG(f.totalHTG)}</td>
                       <td className="px-4 py-3 text-right">
-                        <a
-                          href={`/api/espace-client/factures/${f.id}/pdf`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-jedco hover:underline"
-                        >
-                          PDF
-                        </a>
+                        <DocumentPreviewButton
+                          url={`/api/espace-client/factures/${f.id}/pdf`}
+                          titre={f.reference}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -133,14 +130,10 @@ export default async function EspaceClientPage() {
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">{formatHTG(d.totalHTG)}</td>
                       <td className="px-4 py-3 text-right">
-                        <a
-                          href={`/api/espace-client/devis/${d.id}/pdf`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-jedco hover:underline"
-                        >
-                          PDF
-                        </a>
+                        <DocumentPreviewButton
+                          url={`/api/espace-client/devis/${d.id}/pdf`}
+                          titre={d.reference}
+                        />
                       </td>
                     </tr>
                   ))}

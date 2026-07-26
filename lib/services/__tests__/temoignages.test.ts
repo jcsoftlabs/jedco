@@ -2,6 +2,7 @@ import "dotenv/config";
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { creerTemoignage, listerTemoignagesPublies, listerTemoignages, modifierTemoignage, supprimerTemoignage } from "../temoignages";
+import { creerTemoignagePublicSchema } from "@/lib/schemas/temoignages";
 
 describe("module Temoignages — vitrine publique (intégration réelle)", () => {
   const idsTemoignages: string[] = [];
@@ -65,5 +66,27 @@ describe("module Temoignages — vitrine publique (intégration réelle)", () =>
 
   it("supprimerTemoignage renvoie null pour un id inexistant", async () => {
     expect(await supprimerTemoignage("id-inexistant")).toBeNull();
+  });
+
+  it("le schéma public n'expose ni `ordre` ni `actif` — pas de modération avant publication", async () => {
+    const donnees = creerTemoignagePublicSchema.parse({
+      nom: "Visiteur",
+      type: "Client particulier",
+      note: 5,
+      commentaire: "Très satisfait",
+      actif: false, // tenter de le passer quand même : doit être ignoré, pas rejeté
+      ordre: 999,
+    });
+    expect(donnees).not.toHaveProperty("actif");
+    expect(donnees).not.toHaveProperty("ordre");
+
+    const t = await creerTemoignage({ ...donnees, ordre: 0 });
+    idsTemoignages.push(t.id);
+
+    // Actif dès l'insertion (défaut Prisma) : visible immédiatement, aucune
+    // étape de modération à franchir.
+    expect(t.actif).toBe(true);
+    const publies = await listerTemoignagesPublies();
+    expect(publies.some((p) => p.id === t.id)).toBe(true);
   });
 });
