@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import DevisPreviewModal from "./DevisPreviewModal";
+import { IconeOeil, IconeEnvoyer, IconeCheck, IconeX, IconeConvertir } from "../icons";
 
 const COULEUR_STATUT: Record<string, string> = {
   BROUILLON: "bg-slate-100 text-slate-700",
@@ -95,17 +96,21 @@ export default function DevisRow({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setApercuOuvert(true)}
-              className="text-xs rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100"
+              title="Aperçu"
+              aria-label="Aperçu"
+              className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100"
             >
-              Aperçu
+              <IconeOeil />
             </button>
             {modifiable && devis.statut === "BROUILLON" && (
               <button
                 disabled={envoi}
                 onClick={() => changerStatut("ENVOYE")}
-                className="text-xs rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+                title="Marquer envoyé"
+                aria-label="Marquer envoyé"
+                className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-60"
               >
-                Marquer envoyé
+                <IconeEnvoyer />
               </button>
             )}
             {modifiable && devis.statut === "ENVOYE" && (
@@ -113,16 +118,20 @@ export default function DevisRow({
                 <button
                   disabled={envoi}
                   onClick={() => changerStatut("ACCEPTE")}
-                  className="text-xs rounded border border-emerald-300 px-2 py-1 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                  title="Marquer accepté"
+                  aria-label="Marquer accepté"
+                  className="rounded border border-emerald-300 p-1.5 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
                 >
-                  Accepté
+                  <IconeCheck />
                 </button>
                 <button
                   disabled={envoi}
                   onClick={() => changerStatut("REFUSE")}
-                  className="text-xs rounded border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                  title="Marquer refusé"
+                  aria-label="Marquer refusé"
+                  className="rounded border border-red-300 p-1.5 text-red-700 hover:bg-red-50 disabled:opacity-60"
                 >
-                  Refusé
+                  <IconeX />
                 </button>
               </>
             )}
@@ -130,9 +139,11 @@ export default function DevisRow({
               <button
                 disabled={envoi}
                 onClick={convertir}
-                className="text-xs rounded border border-jedco px-2 py-1 text-jedco hover:bg-jedco/5 disabled:opacity-60"
+                title="Convertir en facture"
+                aria-label="Convertir en facture"
+                className="rounded border border-jedco p-1.5 text-jedco hover:bg-jedco/5 disabled:opacity-60"
               >
-                Convertir en facture
+                <IconeConvertir />
               </button>
             )}
           </div>

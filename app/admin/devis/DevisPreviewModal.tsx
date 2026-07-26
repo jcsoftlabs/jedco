@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { IconeEnveloppe, IconeImprimante, IconeTelecharger, IconeFermer } from "../icons";
 
 export default function DevisPreviewModal({
   devisId,
@@ -55,31 +56,37 @@ export default function DevisPreviewModal({
               <button
                 onClick={envoyerParEmail}
                 disabled={envoi}
-                title={`Envoyer à ${clientEmail}`}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                title={envoi ? "Envoi…" : `Envoyer à ${clientEmail}`}
+                aria-label="Envoyer par e-mail"
+                className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100 disabled:opacity-60"
               >
-                {envoi ? "Envoi…" : "Envoyer par e-mail"}
+                <IconeEnveloppe />
               </button>
             )}
             <button
               onClick={imprimer}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+              title="Imprimer"
+              aria-label="Imprimer"
+              className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100"
             >
-              Imprimer
+              <IconeImprimante />
             </button>
             <a
               href={urlPdf}
               download={`${reference}.pdf`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
+              title="Télécharger"
+              aria-label="Télécharger"
+              className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100"
             >
-              Télécharger
+              <IconeTelecharger />
             </a>
             <button
               onClick={onFermer}
+              title="Fermer"
               aria-label="Fermer"
-              className="rounded-lg px-2 py-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             >
-              ✕
+              <IconeFermer />
             </button>
           </div>
         </div>

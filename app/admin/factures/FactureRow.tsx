@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import FacturePreviewModal from "./FacturePreviewModal";
+import { IconeOeil, IconePaiement } from "../icons";
 
 const COULEUR_STATUT: Record<string, string> = {
   EN_ATTENTE: "bg-slate-100 text-slate-700",
@@ -89,16 +90,20 @@ export default function FactureRow({
           <div className="flex gap-2">
             <button
               onClick={() => setApercuOuvert(true)}
-              className="text-xs rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100"
+              title="Aperçu"
+              aria-label="Aperçu"
+              className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100"
             >
-              Aperçu
+              <IconeOeil />
             </button>
             {soldable && (
               <button
                 onClick={() => setFormulaireOuvert((v) => !v)}
-                className="text-xs rounded border border-jedco px-2 py-1 text-jedco hover:bg-jedco/5"
+                title="Enregistrer un paiement"
+                aria-label="Enregistrer un paiement"
+                className="rounded border border-jedco p-1.5 text-jedco hover:bg-jedco/5"
               >
-                Paiement
+                <IconePaiement />
               </button>
             )}
           </div>
