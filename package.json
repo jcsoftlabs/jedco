@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "db:nettoyer-tests": "tsx scripts/nettoyer-donnees-test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
+    "tsx": "^4.23.1",
     "typescript": "^5.5.4",
     "vitest": "^4.1.10"
   }
