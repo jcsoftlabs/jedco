@@ -3,6 +3,8 @@ import LogoutButton from "./LogoutButton";
 
 const LIENS_ADMIN_SUPERVISEUR = [
   { href: "/admin/demandes", label: "Demandes" },
+  { href: "/admin/galerie", label: "Galerie" },
+  { href: "/admin/temoignages", label: "Témoignages" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/contrats", label: "Contrats" },
   { href: "/admin/interventions", label: "Interventions" },

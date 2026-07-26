@@ -21,7 +21,14 @@ export default function ContactForm() {
     e.preventDefault();
     setErreur(null);
     setEnvoi(true);
-    const fd = new FormData(e.currentTarget);
+    // Capturés avant le premier await : passé ce point, le navigateur remet
+    // e.currentTarget à null (valable seulement pendant le dispatch
+    // synchrone de l'événement) — l'utiliser après un await plantait
+    // silencieusement sur form.reset(), rattrapé par le catch ci-dessous et
+    // affichant "Connexion impossible" alors que la demande était bien
+    // enregistrée en base.
+    const form = e.currentTarget;
+    const fd = new FormData(form);
 
     try {
       const res = await fetch("/api/public/demandes-devis", {
@@ -44,7 +51,7 @@ export default function ContactForm() {
         return;
       }
       setSubmitted(true);
-      e.currentTarget.reset();
+      form.reset();
     } catch {
       setErreur("Connexion impossible. Vous pouvez aussi nous appeler au 2942-1109 / 2942-1110.");
     } finally {

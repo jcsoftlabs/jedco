@@ -57,6 +57,12 @@ export function cleMediaIntervention(interventionId: string, nomFichier: string)
   return `interventions/${interventionId}/${randomUUID()}.${extension(nomFichier)}`;
 }
 
+// Photos de la galerie publique — uploadées directement par un admin, sans
+// intervention associée (Media.interventionId reste null pour ces entrées).
+export function cleMediaGalerie(nomFichier: string): string {
+  return `galerie/${randomUUID()}.${extension(nomFichier)}`;
+}
+
 export async function creerUrlUploadPresignee(
   cle: string,
   contentType: string
