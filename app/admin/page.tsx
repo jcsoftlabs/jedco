@@ -6,6 +6,11 @@ import AdminHeader from "./AdminHeader";
 export default async function AdminHomePage() {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
+  // Un TECHNICIEN n'a accès qu'à Interventions et Terrain (voir
+  // AdminHeader.tsx) — ce tableau de bord générique, plein de liens vers des
+  // pages qui le renverraient aussitôt ici, ne lui sert à rien. Terrain est
+  // l'écran conçu pour son usage quotidien.
+  if (user.role === "TECHNICIEN") redirect("/admin/terrain");
 
   return (
     <div className="min-h-screen bg-slate-50">
