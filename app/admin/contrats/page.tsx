@@ -7,11 +7,12 @@ import { listerClients } from "@/lib/services/clients";
 import { formatHTG } from "@/lib/money";
 import { listerTypesService } from "@/lib/services/types-reference";
 import NouveauContratForm from "./NouveauContratForm";
+import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 
 export default async function ContratsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string }>;
+  searchParams: Promise<{ clientId?: string; page?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -22,10 +23,11 @@ export default async function ContratsPage({
     throw e;
   }
 
-  const { clientId } = await searchParams;
+  const { clientId, page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
 
-  const [{ data: contrats }, { data: clients }, typesService] = await Promise.all([
-    listerContrats({ page: 1, limit: 50 }),
+  const [{ data: contrats, meta }, { data: clients }, typesService] = await Promise.all([
+    listerContrats({ page, limit: TAILLE_PAGE_DEFAUT }),
     listerClients({ page: 1, limit: 200 }),
     listerTypesService(true),
   ]);
@@ -73,6 +75,15 @@ export default async function ContratsPage({
             )}
           </tbody>
         </table>
+        <div className="mt-2 rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Pager
+            page={meta.page}
+            limit={meta.limit}
+            total={meta.total}
+            basePath="/admin/contrats"
+            searchParams={{ clientId }}
+          />
+        </div>
     </div>
   );
 }

@@ -6,11 +6,12 @@ import { listerClients } from "@/lib/services/clients";
 import { listerCatalogue } from "@/lib/services/catalogue";
 import NouveauDevisForm from "./NouveauDevisForm";
 import DevisTable from "./DevisTable";
+import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 
 export default async function DevisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string; description?: string; ouvrir?: string }>;
+  searchParams: Promise<{ clientId?: string; description?: string; ouvrir?: string; page?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -21,10 +22,11 @@ export default async function DevisPage({
     throw e;
   }
 
-  const { clientId, description, ouvrir } = await searchParams;
+  const { clientId, description, ouvrir, page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
 
-  const [{ data: devis }, { data: clients }, catalogue] = await Promise.all([
-    listerDevis({ page: 1, limit: 200 }),
+  const [{ data: devis, meta }, { data: clients }, catalogue] = await Promise.all([
+    listerDevis({ page, limit: TAILLE_PAGE_DEFAUT }),
     listerClients({ page: 1, limit: 200 }),
     listerCatalogue({ actif: true }),
   ]);
@@ -54,6 +56,15 @@ export default async function DevisPage({
           client: { nom: d.client.nom, email: d.client.email },
         }))}
       />
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Pager
+          page={meta.page}
+          limit={meta.limit}
+          total={meta.total}
+          basePath="/admin/devis"
+          searchParams={{ clientId, description, ouvrir }}
+        />
+      </div>
     </div>
   );
 }

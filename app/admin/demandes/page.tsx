@@ -4,8 +4,13 @@ import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerDemandesDevis } from "@/lib/services/demandes-devis";
 import { listerTypesService } from "@/lib/services/types-reference";
 import DemandeRow from "./DemandeRow";
+import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 
-export default async function DemandesPage() {
+export default async function DemandesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
   try {
@@ -15,12 +20,18 @@ export default async function DemandesPage() {
     throw e;
   }
 
-  const [{ data: demandes }, typesService] = await Promise.all([
-    listerDemandesDevis({ page: 1, limit: 100 }),
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+
+  const [{ data: demandes, meta }, { meta: metaNonTraitees }, typesService] = await Promise.all([
+    listerDemandesDevis({ page, limit: TAILLE_PAGE_DEFAUT }),
+    // Comptée séparément du lot affiché : sinon le nombre "non traitées"
+    // change selon la page consultée au lieu de refléter le total réel.
+    listerDemandesDevis({ page: 1, limit: 1, traite: false }),
     listerTypesService(),
   ]);
   const libellesService = Object.fromEntries(typesService.map((t) => [t.code, t.libelle]));
-  const nonTraitees = demandes.filter((d) => !d.traite).length;
+  const nonTraitees = metaNonTraitees.total;
 
   return (
     <div className="max-w-4xl">
@@ -53,6 +64,9 @@ export default async function DemandesPage() {
               Aucune demande pour l&apos;instant.
             </p>
           )}
+        </div>
+        <div className="mt-2 rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Pager page={meta.page} limit={meta.limit} total={meta.total} basePath="/admin/demandes" />
         </div>
     </div>
   );

@@ -7,11 +7,12 @@ import { listerCatalogue } from "@/lib/services/catalogue";
 import { formatHTG } from "@/lib/money";
 import NouvelleFactureForm from "./NouvelleFactureForm";
 import FacturesTable from "./FacturesTable";
+import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 
 export default async function FacturesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string }>;
+  searchParams: Promise<{ clientId?: string; page?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -22,10 +23,11 @@ export default async function FacturesPage({
     throw e;
   }
 
-  const { clientId } = await searchParams;
+  const { clientId, page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
 
-  const [{ data: factures }, { data: clients }, stats, catalogue] = await Promise.all([
-    listerFactures({ page: 1, limit: 200 }),
+  const [{ data: factures, meta }, { data: clients }, stats, catalogue] = await Promise.all([
+    listerFactures({ page, limit: TAILLE_PAGE_DEFAUT }),
     listerClients({ page: 1, limit: 200 }),
     statsFactures({}),
     listerCatalogue({ actif: true }),
@@ -70,6 +72,15 @@ export default async function FacturesPage({
           paiements: f.paiements.map((p) => ({ montantHTG: p.montantHTG.toString() })),
         }))}
       />
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Pager
+          page={meta.page}
+          limit={meta.limit}
+          total={meta.total}
+          basePath="/admin/factures"
+          searchParams={{ clientId }}
+        />
+      </div>
     </div>
   );
 }

@@ -4,8 +4,13 @@ import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerClients } from "@/lib/services/clients";
 import NouveauClientForm from "./NouveauClientForm";
 import ClientsTable from "./ClientsTable";
+import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
   try {
@@ -15,7 +20,10 @@ export default async function ClientsPage() {
     throw e;
   }
 
-  const { data: clients } = await listerClients({ page: 1, limit: 200 });
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+
+  const { data: clients, meta } = await listerClients({ page, limit: TAILLE_PAGE_DEFAUT });
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -34,6 +42,9 @@ export default async function ClientsPage() {
           email: c.email,
         }))}
       />
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Pager page={meta.page} limit={meta.limit} total={meta.total} basePath="/admin/clients" />
+      </div>
     </div>
   );
 }

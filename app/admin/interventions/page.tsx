@@ -8,13 +8,21 @@ import { listerTypesService } from "@/lib/services/types-reference";
 import { prisma } from "@/lib/db";
 import NouvelleInterventionForm from "./NouvelleInterventionForm";
 import InterventionsTable from "./InterventionsTable";
+import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 
-export default async function InterventionsPage() {
+export default async function InterventionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
 
-  const [{ data: interventions }, { data: clients }, vehicules, techniciens, typesService] = await Promise.all([
-    listerInterventions({ page: 1, limit: 200 }, user),
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+
+  const [{ data: interventions, meta }, { data: clients }, vehicules, techniciens, typesService] = await Promise.all([
+    listerInterventions({ page, limit: TAILLE_PAGE_DEFAUT }, user),
     listerClients({ page: 1, limit: 200 }),
     prisma.vehicule.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" } }),
     listerTechniciens(),
@@ -59,6 +67,9 @@ export default async function InterventionsPage() {
           vehicule: i.vehicule ? { immatriculation: i.vehicule.immatriculation } : null,
         }))}
       />
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Pager page={meta.page} limit={meta.limit} total={meta.total} basePath="/admin/interventions" />
+      </div>
     </div>
   );
 }

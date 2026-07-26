@@ -25,9 +25,8 @@ export default async function Testimonials() {
                     {"☆".repeat(5 - t.note)}
                   </p>
                   <p className="mt-3 text-sm text-slate-600 italic">&quot;{t.commentaire}&quot;</p>
-                  <p className="mt-4 text-sm font-semibold text-jedco-dark">
-                    {t.type}
-                  </p>
+                  <p className="mt-4 text-sm font-semibold text-jedco-dark">{t.nom}</p>
+                  <p className="text-xs text-slate-500">{t.type}</p>
                 </article>
               </FadeUp>
             ))}
