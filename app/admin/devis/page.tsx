@@ -3,7 +3,7 @@ import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerDevis } from "@/lib/services/devis";
 import { statutDevisSchema } from "@/lib/schemas/devis";
-import { listerClients } from "@/lib/services/clients";
+import { listerClientsPourSelection } from "@/lib/services/clients";
 import { listerCatalogue } from "@/lib/services/catalogue";
 import NouveauDevisForm from "./NouveauDevisForm";
 import DevisTable from "./DevisTable";
@@ -34,9 +34,9 @@ export default async function DevisPage({
   const page = Math.max(1, Number(pageParam) || 1);
   const statutValide = statutDevisSchema.safeParse(statut).data;
 
-  const [{ data: devis, meta }, { data: clients }, catalogue] = await Promise.all([
+  const [{ data: devis, meta }, clients, catalogue] = await Promise.all([
     listerDevis({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }),
-    listerClients({ page: 1, limit: 200 }),
+    listerClientsPourSelection(),
     listerCatalogue({ actif: true }),
   ]);
 

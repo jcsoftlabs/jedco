@@ -15,5 +15,11 @@ export default defineConfig({
     // allers-retours réseau enchaînés ; la latence Railway est ponctuellement
     // variable, vérifié empiriquement sur ce projet.
     testTimeout: 40_000,
+    // Même raison pour les hooks, dont le défaut (10s) était resté en place :
+    // un beforeAll qui enchaîne plusieurs insertions de préparation dépasse
+    // ce seuil quand les fichiers de tests s'exécutent en parallèle et se
+    // partagent la latence de la base distante (~160 ms par aller-retour).
+    // Observé sur paiements et facturation-recurrente, qui passent isolément.
+    hookTimeout: 40_000,
   },
 });

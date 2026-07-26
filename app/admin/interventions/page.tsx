@@ -3,7 +3,7 @@ import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { listerInterventions } from "@/lib/services/interventions";
 import { statutInterventionSchema } from "@/lib/schemas/interventions";
-import { listerClients } from "@/lib/services/clients";
+import { listerClientsPourSelection } from "@/lib/services/clients";
 import { listerTechniciens } from "@/lib/services/techniciens";
 import { listerTypesService } from "@/lib/services/types-reference";
 import { prisma } from "@/lib/db";
@@ -26,9 +26,9 @@ export default async function InterventionsPage({
   const page = Math.max(1, Number(pageParam) || 1);
   const statutValide = statutInterventionSchema.safeParse(statut).data;
 
-  const [{ data: interventions, meta }, { data: clients }, vehicules, techniciens, typesService] = await Promise.all([
+  const [{ data: interventions, meta }, clients, vehicules, techniciens, typesService] = await Promise.all([
     listerInterventions({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }, user),
-    listerClients({ page: 1, limit: 200 }),
+    listerClientsPourSelection(),
     prisma.vehicule.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" } }),
     listerTechniciens(),
     listerTypesService(true),

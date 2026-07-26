@@ -3,7 +3,7 @@ import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerFactures, statsFactures } from "@/lib/services/factures";
 import { statutFactureSchema } from "@/lib/schemas/factures";
-import { listerClients } from "@/lib/services/clients";
+import { listerClientsPourSelection } from "@/lib/services/clients";
 import { listerCatalogue } from "@/lib/services/catalogue";
 import { formatHTG } from "@/lib/money";
 import NouvelleFactureForm from "./NouvelleFactureForm";
@@ -28,9 +28,9 @@ export default async function FacturesPage({
   const page = Math.max(1, Number(pageParam) || 1);
   const statutValide = statutFactureSchema.safeParse(statut).data;
 
-  const [{ data: factures, meta }, { data: clients }, stats, catalogue] = await Promise.all([
+  const [{ data: factures, meta }, clients, stats, catalogue] = await Promise.all([
     listerFactures({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }),
-    listerClients({ page: 1, limit: 200 }),
+    listerClientsPourSelection(),
     statsFactures({}),
     listerCatalogue({ actif: true }),
   ]);

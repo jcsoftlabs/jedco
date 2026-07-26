@@ -47,6 +47,20 @@ export async function listerClients(params: ListeClientsParams) {
   return { data, meta: { page, limit, total } };
 }
 
+// Destinée aux menus déroulants « choisir un client » des formulaires de
+// facture, devis, contrat et intervention. listerClients ferait deux
+// allers-retours (findMany + count) et rapatrierait toutes les colonnes,
+// alors que seuls trois champs sont affichés — chaque aller-retour vers la
+// base coûte ~160 ms depuis les fonctions serveur, ce n'est pas négligeable
+// sur une page qui en enchaîne déjà plusieurs.
+export async function listerClientsPourSelection() {
+  return prisma.client.findMany({
+    where: { deletedAt: null, actif: true },
+    select: { id: true, nom: true, code: true },
+    orderBy: { nom: "asc" },
+  });
+}
+
 export async function obtenirClient(id: string) {
   return prisma.client.findFirst({ where: { id, deletedAt: null } });
 }

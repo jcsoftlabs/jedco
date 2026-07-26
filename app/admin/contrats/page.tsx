@@ -3,7 +3,7 @@ import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerContrats } from "@/lib/services/contrats";
-import { listerClients } from "@/lib/services/clients";
+import { listerClientsPourSelection } from "@/lib/services/clients";
 import { formatHTG } from "@/lib/money";
 import { listerTypesService } from "@/lib/services/types-reference";
 import NouveauContratForm from "./NouveauContratForm";
@@ -26,9 +26,9 @@ export default async function ContratsPage({
   const { clientId, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
-  const [{ data: contrats, meta }, { data: clients }, typesService] = await Promise.all([
+  const [{ data: contrats, meta }, clients, typesService] = await Promise.all([
     listerContrats({ page, limit: TAILLE_PAGE_DEFAUT }),
-    listerClients({ page: 1, limit: 200 }),
+    listerClientsPourSelection(),
     listerTypesService(true),
   ]);
 
