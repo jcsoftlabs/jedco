@@ -11,6 +11,7 @@ import {
   listerFactures,
   marquerFacturesEnRetard,
   statsFactures,
+  totauxFactures,
 } from "../factures";
 
 describe("module Factures (intégration réelle)", () => {
@@ -304,6 +305,19 @@ describe("module Factures (intégration réelle)", () => {
     expect(stats.nombreFactures).toBeGreaterThan(0);
     expect(stats.totalFactureHTG).toBeGreaterThan(0n);
     expect(stats.revenusParVille["VilleFactureTest"]).toBeGreaterThan(0n);
+  });
+
+  // La page Facturation est passée de statsFactures (qui charge toute la
+  // table) à totauxFactures (agrégation SQL). Une divergence entre les deux
+  // afficherait des montants faux sans lever la moindre erreur — d'où cette
+  // comparaison directe, sur les mêmes données réelles.
+  it("totauxFactures donne exactement les mêmes totaux que statsFactures", async () => {
+    const [totaux, stats] = await Promise.all([totauxFactures(), statsFactures({})]);
+
+    expect(totaux.totalFactureHTG).toBe(stats.totalFactureHTG);
+    expect(totaux.totalPayeHTG).toBe(stats.totalPayeHTG);
+    expect(totaux.totalImpayeHTG).toBe(stats.totalImpayeHTG);
+    expect(totaux.nombreFactures).toBe(stats.nombreFactures);
   });
 
   it("la recherche trouve une facture par le nom du client (jointure), insensible aux accents", async () => {

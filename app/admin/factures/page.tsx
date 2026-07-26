@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import { listerFactures, statsFactures } from "@/lib/services/factures";
+import { listerFactures, totauxFactures } from "@/lib/services/factures";
 import { statutFactureSchema } from "@/lib/schemas/factures";
 import { listerClientsPourSelection } from "@/lib/services/clients";
 import { listerCatalogue } from "@/lib/services/catalogue";
@@ -31,7 +31,7 @@ export default async function FacturesPage({
   const [{ data: factures, meta }, clients, stats, catalogue] = await Promise.all([
     listerFactures({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }),
     listerClientsPourSelection(),
-    statsFactures({}),
+    totauxFactures(),
     listerCatalogue({ actif: true }),
   ]);
 

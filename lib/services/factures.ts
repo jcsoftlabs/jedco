@@ -225,6 +225,40 @@ export async function marquerFacturesEnRetard(maintenant: Date = new Date()): Pr
   return resultat.count;
 }
 
+// Les trois totaux affichés en tête de la page Facturation, et rien d'autre.
+//
+// statsFactures ci-dessous charge TOUTES les factures avec leurs lignes,
+// leurs paiements et la fiche client complète, puis additionne en JavaScript.
+// C'est acceptable pour le tableau de bord, qui a réellement besoin de la
+// ventilation par service et par ville — mais pas pour une page ouverte en
+// permanence, dont le coût grandirait avec chaque facture émise.
+//
+// Ici les sommes sont calculées par PostgreSQL : deux requêtes, à mémoire
+// constante, que la base contienne dix factures ou cent mille.
+export async function totauxFactures() {
+  const [factures, paiements] = await Promise.all([
+    prisma.facture.aggregate({
+      where: { deletedAt: null },
+      _sum: { totalHTG: true },
+      _count: true,
+    }),
+    prisma.paiement.aggregate({
+      where: { facture: { deletedAt: null } },
+      _sum: { montantHTG: true },
+    }),
+  ]);
+
+  const totalFactureHTG = factures._sum.totalHTG ?? 0n;
+  const totalPayeHTG = paiements._sum.montantHTG ?? 0n;
+
+  return {
+    totalFactureHTG,
+    totalPayeHTG,
+    totalImpayeHTG: totalFactureHTG - totalPayeHTG,
+    nombreFactures: factures._count,
+  };
+}
+
 export async function statsFactures(params: { dateDebut?: Date; dateFin?: Date }) {
   const where: Prisma.FactureWhereInput = {
     deletedAt: null,
