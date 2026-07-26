@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function DemandeRow({
   demande,
   libellesService,
+  surligner = false,
 }: {
   /** code → libellé, issu de la table de référence TypeService. */
   libellesService: Record<string, string>;
+  /** Vrai quand cette ligne est visée par ?highlight=<id> (venu de la cloche
+      de notifications) — la ligne se scrolle en vue et se met en évidence
+      un instant, pour que l'admin retrouve immédiatement la demande cliquée. */
+  surligner?: boolean;
   demande: {
     id: string;
     nom: string;
@@ -24,6 +29,15 @@ export default function DemandeRow({
   const router = useRouter();
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [enEvidence, setEnEvidence] = useState(surligner);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!surligner) return;
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setEnEvidence(false), 3000);
+    return () => clearTimeout(t);
+  }, [surligner]);
 
   async function basculerTraite() {
     setEnvoi(true);
@@ -59,7 +73,12 @@ export default function DemandeRow({
   }
 
   return (
-    <div className={`rounded-lg border bg-white p-4 ${demande.traite ? "border-slate-200 opacity-60" : "border-jedco/30"}`}>
+    <div
+      ref={ref}
+      className={`rounded-lg border bg-white p-4 transition-shadow ${
+        demande.traite ? "border-slate-200 opacity-60" : "border-jedco/30"
+      } ${enEvidence ? "ring-2 ring-jedco ring-offset-2" : ""}`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-jedco-dark">{demande.nom}</p>

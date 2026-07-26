@@ -68,10 +68,22 @@ export default async function FacturesPage({
           id: f.id,
           reference: f.reference,
           statut: f.statut,
+          montantHTG: f.montantHTG.toString(),
+          taxeHTG: f.taxeHTG.toString(),
           totalHTG: f.totalHTG.toString(),
           dateEcheance: f.dateEcheance.toISOString(),
           client: { nom: f.client.nom, email: f.client.email },
           paiements: f.paiements.map((p) => ({ montantHTG: p.montantHTG.toString() })),
+          lignes: f.lignes.map((l) => ({
+            description: l.description,
+            service: l.service,
+            quantite: l.quantite,
+            prixUnitaireHTG: l.prixUnitaireHTG.toString(),
+          })),
+        }))}
+        catalogue={catalogue.map((a) => ({
+          nom: a.nom,
+          prixSuggereHTG: a.prixSuggereHTG?.toString() ?? null,
         }))}
       />
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">

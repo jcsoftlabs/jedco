@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconeEnveloppe, IconeImprimante, IconeTelecharger, IconeFermer } from "../icons";
+import Tooltip from "../Tooltip";
 
 export default function DevisPreviewModal({
   devisId,
@@ -53,41 +54,45 @@ export default function DevisPreviewModal({
           <h3 className="font-semibold text-jedco-dark">Devis {reference}</h3>
           <div className="flex items-center gap-2">
             {clientEmail && (
-              <button
-                onClick={envoyerParEmail}
-                disabled={envoi}
-                title={envoi ? "Envoi…" : `Envoyer à ${clientEmail}`}
-                aria-label="Envoyer par e-mail"
-                className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-              >
-                <IconeEnveloppe />
-              </button>
+              <Tooltip texte={envoi ? "Envoi…" : `Envoyer à ${clientEmail}`}>
+                <button
+                  onClick={envoyerParEmail}
+                  disabled={envoi}
+                  aria-label="Envoyer par e-mail"
+                  className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                >
+                  <IconeEnveloppe />
+                </button>
+              </Tooltip>
             )}
-            <button
-              onClick={imprimer}
-              title="Imprimer"
-              aria-label="Imprimer"
-              className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100"
-            >
-              <IconeImprimante />
-            </button>
-            <a
-              href={urlPdf}
-              download={`${reference}.pdf`}
-              title="Télécharger"
-              aria-label="Télécharger"
-              className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100"
-            >
-              <IconeTelecharger />
-            </a>
-            <button
-              onClick={onFermer}
-              title="Fermer"
-              aria-label="Fermer"
-              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            >
-              <IconeFermer />
-            </button>
+            <Tooltip texte="Imprimer">
+              <button
+                onClick={imprimer}
+                aria-label="Imprimer"
+                className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100"
+              >
+                <IconeImprimante />
+              </button>
+            </Tooltip>
+            <Tooltip texte="Télécharger">
+              <a
+                href={urlPdf}
+                download={`${reference}.pdf`}
+                aria-label="Télécharger"
+                className="rounded-lg border border-slate-300 p-2 text-slate-700 hover:bg-slate-100"
+              >
+                <IconeTelecharger />
+              </a>
+            </Tooltip>
+            <Tooltip texte="Fermer">
+              <button
+                onClick={onFermer}
+                aria-label="Fermer"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <IconeFermer />
+              </button>
+            </Tooltip>
           </div>
         </div>
         {messageEnvoi && (

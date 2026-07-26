@@ -28,10 +28,21 @@ export const creerFactureSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
-export const modifierFactureSchema = z.object({
-  notes: z.string().trim().max(2000).optional(),
-  dateEcheance: z.coerce.date().optional(),
-});
+// `lignes` et `tauxTaxePourcent` ne sont acceptés ensemble que lorsqu'on
+// modifie les lignes : changer les lignes sans redonner le taux de taxe
+// laisserait le service deviner un taux implicite, source d'erreur silencieuse
+// sur un document comptable. Le formulaire d'édition envoie systématiquement
+// les deux ensemble (voir EditerFactureModal.tsx).
+export const modifierFactureSchema = z
+  .object({
+    notes: z.string().trim().max(2000).optional(),
+    dateEcheance: z.coerce.date().optional(),
+    lignes: z.array(ligneFactureSchema).min(1).optional(),
+    tauxTaxePourcent: z.number().min(0).max(100).optional(),
+  })
+  .refine((v) => (v.lignes === undefined) === (v.tauxTaxePourcent === undefined), {
+    message: "lignes et tauxTaxePourcent doivent être fournis ensemble",
+  });
 
 export const listeFacturesSchema = z.object({
   clientId: z.string().optional(),

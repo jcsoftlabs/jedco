@@ -9,7 +9,7 @@ import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 export default async function DemandesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; highlight?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -20,7 +20,7 @@ export default async function DemandesPage({
     throw e;
   }
 
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, highlight } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
   const [{ data: demandes, meta }, { meta: metaNonTraitees }, typesService] = await Promise.all([
@@ -46,6 +46,7 @@ export default async function DemandesPage({
             <DemandeRow
               key={d.id}
               libellesService={libellesService}
+              surligner={d.id === highlight}
               demande={{
                 id: d.id,
                 nom: d.nom,

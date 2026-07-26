@@ -181,6 +181,57 @@ describe("module Factures (intégration réelle)", () => {
     await expect(modifierFacture(facture.id, { notes: "autre" })).rejects.toThrow(ErreurMetier);
   });
 
+  it("modifie les lignes d'une facture non payée et recalcule les totaux", async () => {
+    const facture = await creerFacture({
+      clientId,
+      lignes: [{ description: "Ligne initiale", quantite: 1, prixUnitaireHTG: 1000 }],
+      tauxTaxePourcent: 0,
+      dateEcheanceJours: 30,
+    });
+    idsFactures.push(facture.id);
+
+    const modifiee = await modifierFacture(facture.id, {
+      lignes: [
+        { description: "Vidange", quantite: 2, prixUnitaireHTG: 5_000 },
+        { description: "Nettoyage", quantite: 1, prixUnitaireHTG: 2_000 },
+      ],
+      tauxTaxePourcent: 10,
+    });
+
+    expect(modifiee?.lignes).toHaveLength(2);
+    // Sous-total : 2*5000 + 1*2000 = 12000 HTG. Taxe 10% = 1200 HTG.
+    expect(modifiee?.montantHTG).toBe(1_200_000n);
+    expect(modifiee?.taxeHTG).toBe(120_000n);
+    expect(modifiee?.totalHTG).toBe(1_320_000n);
+  });
+
+  it("refuse de modifier les lignes d'une facture qui a déjà des paiements", async () => {
+    const facture = await creerFacture({
+      clientId,
+      lignes: [{ description: "x", quantite: 1, prixUnitaireHTG: 1000 }],
+      tauxTaxePourcent: 0,
+      dateEcheanceJours: 30,
+    });
+    idsFactures.push(facture.id);
+
+    await prisma.paiement.create({
+      data: {
+        factureId: facture.id,
+        montantHTG: 10_000n,
+        mode: "CASH",
+        idempotencyKey: `test-lignes-${Date.now()}`,
+        createdBy: "test",
+      },
+    });
+
+    await expect(
+      modifierFacture(facture.id, {
+        lignes: [{ description: "y", quantite: 1, prixUnitaireHTG: 2000 }],
+        tauxTaxePourcent: 0,
+      })
+    ).rejects.toThrow(ErreurMetier);
+  });
+
   it("le soft delete refuse si des paiements existent", async () => {
     const facture = await creerFacture({
       clientId,

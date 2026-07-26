@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import DevisPreviewModal from "./DevisPreviewModal";
 import { IconeOeil, IconeEnvoyer, IconeCheck, IconeX, IconeConvertir } from "../icons";
+import Tooltip from "../Tooltip";
 
 const COULEUR_STATUT: Record<string, string> = {
   BROUILLON: "bg-slate-100 text-slate-700",
@@ -94,57 +95,62 @@ export default function DevisRow({
         <td className="px-4">{new Date(devis.dateValidite).toLocaleDateString("fr-FR")}</td>
         <td className="px-4 py-2">
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setApercuOuvert(true)}
-              title="Aperçu"
-              aria-label="Aperçu"
-              className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100"
-            >
-              <IconeOeil />
-            </button>
-            {modifiable && devis.statut === "BROUILLON" && (
+            <Tooltip texte="Aperçu">
               <button
-                disabled={envoi}
-                onClick={() => changerStatut("ENVOYE")}
-                title="Marquer envoyé"
-                aria-label="Marquer envoyé"
-                className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+                onClick={() => setApercuOuvert(true)}
+                aria-label="Aperçu"
+                className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100"
               >
-                <IconeEnvoyer />
+                <IconeOeil />
               </button>
+            </Tooltip>
+            {modifiable && devis.statut === "BROUILLON" && (
+              <Tooltip texte="Marquer envoyé">
+                <button
+                  disabled={envoi}
+                  onClick={() => changerStatut("ENVOYE")}
+                  aria-label="Marquer envoyé"
+                  className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+                >
+                  <IconeEnvoyer />
+                </button>
+              </Tooltip>
             )}
             {modifiable && devis.statut === "ENVOYE" && (
               <>
-                <button
-                  disabled={envoi}
-                  onClick={() => changerStatut("ACCEPTE")}
-                  title="Marquer accepté"
-                  aria-label="Marquer accepté"
-                  className="rounded border border-emerald-300 p-1.5 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
-                >
-                  <IconeCheck />
-                </button>
-                <button
-                  disabled={envoi}
-                  onClick={() => changerStatut("REFUSE")}
-                  title="Marquer refusé"
-                  aria-label="Marquer refusé"
-                  className="rounded border border-red-300 p-1.5 text-red-700 hover:bg-red-50 disabled:opacity-60"
-                >
-                  <IconeX />
-                </button>
+                <Tooltip texte="Marquer accepté">
+                  <button
+                    disabled={envoi}
+                    onClick={() => changerStatut("ACCEPTE")}
+                    aria-label="Marquer accepté"
+                    className="rounded border border-emerald-300 p-1.5 text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                  >
+                    <IconeCheck />
+                  </button>
+                </Tooltip>
+                <Tooltip texte="Marquer refusé">
+                  <button
+                    disabled={envoi}
+                    onClick={() => changerStatut("REFUSE")}
+                    aria-label="Marquer refusé"
+                    className="rounded border border-red-300 p-1.5 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                  >
+                    <IconeX />
+                  </button>
+                </Tooltip>
               </>
             )}
             {convertible && (
-              <button
-                disabled={envoi}
-                onClick={convertir}
-                title="Convertir en facture"
-                aria-label="Convertir en facture"
-                className="rounded border border-jedco p-1.5 text-jedco hover:bg-jedco/5 disabled:opacity-60"
-              >
-                <IconeConvertir />
-              </button>
+              <Tooltip texte="Convertir en facture">
+                <button
+                  disabled={envoi}
+                  onClick={convertir}
+                  aria-label="Convertir en facture"
+                  className="rounded border border-jedco p-1.5 text-jedco hover:bg-jedco/5 disabled:opacity-60"
+                >
+                  <IconeConvertir />
+                </button>
+              </Tooltip>
             )}
           </div>
           {erreur && <p className="mt-1 text-xs text-red-600">{erreur}</p>}

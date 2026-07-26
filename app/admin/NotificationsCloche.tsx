@@ -1,0 +1,116 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+const INTERVALLE_MS = 45_000;
+
+type Demande = {
+  id: string;
+  nom: string;
+  ville: string;
+  createdAt: string;
+};
+
+export default function NotificationsCloche() {
+  const router = useRouter();
+  const [ouvert, setOuvert] = useState(false);
+  const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [total, setTotal] = useState(0);
+  const conteneurRef = useRef<HTMLDivElement>(null);
+
+  async function verifier() {
+    try {
+      const res = await fetch("/api/demandes-devis?traite=false&page=1&limit=5");
+      const data = await res.json();
+      if (data.success) {
+        setDemandes(data.data);
+        setTotal(data.meta?.total ?? data.data.length);
+      }
+    } catch {
+      // Silencieux : une vérification manquée ne doit pas perturber l'admin,
+      // la suivante rattrapera dans INTERVALLE_MS.
+    }
+  }
+
+  useEffect(() => {
+    verifier();
+    const id = setInterval(verifier, INTERVALLE_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  // Ferme le panneau au clic en dehors — comportement attendu d'un menu
+  // déroulant, sinon il reste ouvert tant qu'on ne reclique pas la cloche.
+  useEffect(() => {
+    function onClickDehors(e: MouseEvent) {
+      if (conteneurRef.current && !conteneurRef.current.contains(e.target as Node)) {
+        setOuvert(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickDehors);
+    return () => document.removeEventListener("mousedown", onClickDehors);
+  }, []);
+
+  function ouvrirDemande(id: string) {
+    setOuvert(false);
+    router.push(`/admin/demandes?highlight=${id}`);
+  }
+
+  return (
+    <div ref={conteneurRef} className="relative ml-auto">
+      <button
+        onClick={() => setOuvert((v) => !v)}
+        aria-label="Notifications"
+        className="relative rounded-lg p-1.5 text-slate-600 hover:bg-slate-100"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+        {total > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+            {total > 9 ? "9+" : total}
+          </span>
+        )}
+      </button>
+
+      {ouvert && (
+        <div className="absolute right-0 z-40 mt-2 w-80 rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+            <span className="text-sm font-semibold text-jedco-dark">Nouvelles demandes</span>
+            {total > 0 && <span className="text-xs text-slate-400">{total} non traitée{total > 1 ? "s" : ""}</span>}
+          </div>
+          {demandes.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-slate-400">Aucune demande en attente.</p>
+          ) : (
+            <ul className="max-h-80 overflow-y-auto">
+              {demandes.map((d) => (
+                <li key={d.id}>
+                  <button
+                    onClick={() => ouvrirDemande(d.id)}
+                    className="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                  >
+                    <p className="font-medium text-jedco-dark">{d.nom}</p>
+                    <p className="text-xs text-slate-500">
+                      {d.ville} · {new Date(d.createdAt).toLocaleDateString("fr-FR")}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="border-t border-slate-100 px-4 py-2">
+            <Link
+              href="/admin/demandes"
+              onClick={() => setOuvert(false)}
+              className="text-xs font-medium text-jedco hover:underline"
+            >
+              Voir toutes les demandes
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

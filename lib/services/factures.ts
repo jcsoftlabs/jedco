@@ -150,7 +150,42 @@ export async function modifierFacture(id: string, input: ModifierFactureInput) {
     throw new ErreurMetier("Impossible de modifier une facture qui a déjà des paiements enregistrés", 400);
   }
 
-  return prisma.facture.update({ where: { id }, data: input, include: INCLUDE_STANDARD });
+  const { lignes, tauxTaxePourcent, ...reste } = input;
+  if (!lignes || tauxTaxePourcent === undefined) {
+    return prisma.facture.update({ where: { id }, data: reste, include: INCLUDE_STANDARD });
+  }
+
+  // Même calcul que creerFacture — un montant facturé ne se recalcule jamais
+  // qu'à partir des lignes, jamais en ajustant totalHTG directement.
+  const nouvellesLignes = lignes.map((ligne, ordre) => {
+    const prixUnitaireHTG = htgToCentimes(ligne.prixUnitaireHTG);
+    return {
+      description: ligne.description,
+      service: ligne.service,
+      quantite: ligne.quantite,
+      prixUnitaireHTG,
+      totalHTG: prixUnitaireHTG * BigInt(ligne.quantite),
+      ordre,
+    };
+  });
+  const montantHTG = nouvellesLignes.reduce((total, l) => total + l.totalHTG, 0n);
+  const tauxTaxeCentiemes = BigInt(Math.round(tauxTaxePourcent * 100));
+  const taxeHTG = (montantHTG * tauxTaxeCentiemes) / 10_000n;
+  const totalHTG = montantHTG + taxeHTG;
+
+  return prisma.facture.update({
+    where: { id },
+    data: {
+      ...reste,
+      montantHTG,
+      taxeHTG,
+      totalHTG,
+      // Remplacement complet plutôt qu'un diff ligne à ligne : le formulaire
+      // renvoie toujours l'état final voulu, pas une liste de changements.
+      lignes: { deleteMany: {}, create: nouvellesLignes },
+    },
+    include: INCLUDE_STANDARD,
+  });
 }
 
 // Soft delete (§1.12) — refusé si des paiements existent : annuler une

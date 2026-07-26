@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
+import NotificationsCloche from "./NotificationsCloche";
 
 type Lien = { href: string; label: string; icone: React.ReactNode };
 
@@ -232,6 +233,7 @@ export default function AdminShell({
           <h1 className="text-base font-semibold text-jedco-dark">
             {liens.find((l) => estActif(l.href))?.label ?? "Backoffice"}
           </h1>
+          {user.role !== "TECHNICIEN" && <NotificationsCloche />}
         </header>
         <main className="px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>

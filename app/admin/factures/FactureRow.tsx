@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import FacturePreviewModal from "./FacturePreviewModal";
-import { IconeOeil, IconePaiement } from "../icons";
+import EditerFactureModal from "./EditerFactureModal";
+import { IconeOeil, IconePaiement, IconeCrayon } from "../icons";
+import Tooltip from "../Tooltip";
 
 const COULEUR_STATUT: Record<string, string> = {
   EN_ATTENTE: "bg-slate-100 text-slate-700",
@@ -18,21 +20,29 @@ function formatHTGCentimes(centimes: string): string {
   return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(montant);
 }
 
+type ArticleCatalogue = { nom: string; prixSuggereHTG: string | null };
+
 export default function FactureRow({
   facture,
+  catalogue = [],
 }: {
   facture: {
     id: string;
     reference: string;
     statut: string;
+    montantHTG: string;
+    taxeHTG: string;
     totalHTG: string;
     dateEcheance: string;
     client: { nom: string; email: string | null };
     paiements: { montantHTG: string }[];
+    lignes: { description: string; service: string | null; quantite: number; prixUnitaireHTG: string }[];
   };
+  catalogue?: ArticleCatalogue[];
 }) {
   const router = useRouter();
   const [apercuOuvert, setApercuOuvert] = useState(false);
+  const [editionOuverte, setEditionOuverte] = useState(false);
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [montant, setMontant] = useState("");
   const [mode, setMode] = useState("CASH");
@@ -42,6 +52,12 @@ export default function FactureRow({
   const totalPaye = facture.paiements.reduce((s, p) => s + Number(p.montantHTG), 0);
   const resteDuCentimes = Number(facture.totalHTG) - totalPaye;
   const soldable = facture.statut !== "PAYEE" && facture.statut !== "ANNULEE";
+  // Éditer les lignes recalculerait un montant déjà partiellement encaissé —
+  // voir modifierFacture (lib/services/factures.ts) qui refuse ce cas côté
+  // serveur ; on évite ici de proposer un bouton qui échouerait à coup sûr.
+  const modifiableLignes = facture.paiements.length === 0;
+  const tauxTaxePourcentInitial =
+    facture.montantHTG !== "0" ? Math.round((Number(facture.taxeHTG) / Number(facture.montantHTG)) * 10_000) / 100 : 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,23 +104,36 @@ export default function FactureRow({
         <td className="px-4">{new Date(facture.dateEcheance).toLocaleDateString("fr-FR")}</td>
         <td className="px-4 py-2">
           <div className="flex gap-2">
-            <button
-              onClick={() => setApercuOuvert(true)}
-              title="Aperçu"
-              aria-label="Aperçu"
-              className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100"
-            >
-              <IconeOeil />
-            </button>
-            {soldable && (
+            <Tooltip texte="Aperçu">
               <button
-                onClick={() => setFormulaireOuvert((v) => !v)}
-                title="Enregistrer un paiement"
-                aria-label="Enregistrer un paiement"
-                className="rounded border border-jedco p-1.5 text-jedco hover:bg-jedco/5"
+                onClick={() => setApercuOuvert(true)}
+                aria-label="Aperçu"
+                className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100"
               >
-                <IconePaiement />
+                <IconeOeil />
               </button>
+            </Tooltip>
+            {soldable && (
+              <Tooltip texte="Enregistrer un paiement">
+                <button
+                  onClick={() => setFormulaireOuvert((v) => !v)}
+                  aria-label="Enregistrer un paiement"
+                  className="rounded border border-jedco p-1.5 text-jedco hover:bg-jedco/5"
+                >
+                  <IconePaiement />
+                </button>
+              </Tooltip>
+            )}
+            {modifiableLignes && (
+              <Tooltip texte="Modifier les lignes">
+                <button
+                  onClick={() => setEditionOuverte(true)}
+                  aria-label="Modifier les lignes"
+                  className="rounded border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100"
+                >
+                  <IconeCrayon />
+                </button>
+              </Tooltip>
             )}
           </div>
         </td>
@@ -156,6 +185,20 @@ export default function FactureRow({
           reference={facture.reference}
           clientEmail={facture.client.email}
           onFermer={() => setApercuOuvert(false)}
+        />
+      )}
+      {editionOuverte && (
+        <EditerFactureModal
+          factureId={facture.id}
+          reference={facture.reference}
+          lignesInitiales={facture.lignes.map((l) => ({
+            description: l.description,
+            quantite: String(l.quantite),
+            prixUnitaireHTG: String(Number(l.prixUnitaireHTG) / 100),
+          }))}
+          tauxTaxePourcentInitial={tauxTaxePourcentInitial}
+          catalogue={catalogue}
+          onFermer={() => setEditionOuverte(false)}
         />
       )}
     </>

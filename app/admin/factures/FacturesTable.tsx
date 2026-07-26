@@ -7,13 +7,24 @@ type Facture = {
   id: string;
   reference: string;
   statut: string;
+  montantHTG: string;
+  taxeHTG: string;
   totalHTG: string;
   dateEcheance: string;
   client: { nom: string; email: string | null };
   paiements: { montantHTG: string }[];
+  lignes: { description: string; service: string | null; quantite: number; prixUnitaireHTG: string }[];
 };
 
-export default function FacturesTable({ factures }: { factures: Facture[] }) {
+type ArticleCatalogue = { nom: string; prixSuggereHTG: string | null };
+
+export default function FacturesTable({
+  factures,
+  catalogue = [],
+}: {
+  factures: Facture[];
+  catalogue?: ArticleCatalogue[];
+}) {
   return (
     <div>
       <RechercheServeur
@@ -45,7 +56,7 @@ export default function FacturesTable({ factures }: { factures: Facture[] }) {
           </thead>
           <tbody>
             {factures.map((f) => (
-              <FactureRow key={f.id} facture={f} />
+              <FactureRow key={f.id} facture={f} catalogue={catalogue} />
             ))}
             {factures.length === 0 && (
               <tr>
