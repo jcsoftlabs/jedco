@@ -18,6 +18,9 @@ export default async function InterventionsPage({
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
+  // Pas de fuite de données (scopeInterventions renvoie une liste vide pour
+  // un rôle sans fiche technicien), mais un SUPPORT n'a rien à faire ici.
+  if (user.role === "SUPPORT") redirect("/admin/support");
 
   const { page: pageParam, q, statut } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);

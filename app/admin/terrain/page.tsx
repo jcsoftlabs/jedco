@@ -7,6 +7,10 @@ import InterventionTerrainCard from "./InterventionTerrainCard";
 export default async function TerrainPage() {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
+  // Pas de fuite de données (scopeInterventions renvoie une liste vide pour
+  // un rôle sans fiche technicien), mais un SUPPORT n'a rien à faire ici —
+  // le rediriger évite un écran vide déroutant.
+  if (user.role === "SUPPORT") redirect("/admin/support");
 
   // scopeInterventions (lib/auth/rbac.ts) réduit automatiquement cette liste
   // aux interventions assignées à l'utilisateur s'il est TECHNICIEN — ADMIN

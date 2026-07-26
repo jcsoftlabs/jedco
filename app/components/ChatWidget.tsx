@@ -7,6 +7,7 @@ type Message = { role: "user" | "tiffany" | "agent"; text: string };
 type Statut = "IA" | "EN_ATTENTE_AGENT" | "PRISE_EN_CHARGE" | "FERMEE";
 
 const CLE_SESSION = "jedco.chat.sessionId";
+const CLE_INFOS = "jedco.chat.infosCollectees";
 const INTERVALLE_POLL_MS = 4_000;
 
 function obtenirSessionId(): string {
@@ -25,6 +26,9 @@ export default function ChatWidget() {
   const [isSending, setIsSending] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [statut, setStatut] = useState<Statut>("IA");
+  const [infosCollectees, setInfosCollectees] = useState(true);
+  const [nomVisiteur, setNomVisiteur] = useState("");
+  const [telephoneVisiteur, setTelephoneVisiteur] = useState("");
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -33,6 +37,10 @@ export default function ChatWidget() {
   useEffect(() => {
     if (showConversation && !initialized) {
       sessionIdRef.current = obtenirSessionId();
+      // Lu seulement au premier montage de la conversation, jamais pendant
+      // le rendu initial (localStorage n'existe pas côté serveur) — même
+      // logique que le repli de la barre latérale admin (AdminShell.tsx).
+      setInfosCollectees(localStorage.getItem(CLE_INFOS) === "1");
       setMessages([
         {
           role: "tiffany",
@@ -84,6 +92,13 @@ export default function ChatWidget() {
     return () => clearInterval(id);
   }, [statut]);
 
+  function handleSubmitInfos(e: React.FormEvent) {
+    e.preventDefault();
+    localStorage.setItem(CLE_INFOS, "1");
+    setInfosCollectees(true);
+    setTimeout(() => inputRef.current?.focus(), 30);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
@@ -96,7 +111,12 @@ export default function ChatWidget() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: sessionIdRef.current, message: text }),
+        body: JSON.stringify({
+          sessionId: sessionIdRef.current,
+          message: text,
+          nom: nomVisiteur.trim() || undefined,
+          telephone: telephoneVisiteur.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -177,6 +197,45 @@ export default function ChatWidget() {
                   </svg>
                 </div>
               </button>
+            </div>
+          ) : !infosCollectees ? (
+            <div>
+              <div className="flex items-center justify-between bg-jedco-dark px-5 py-3 text-white">
+                <p className="text-sm font-medium">Tiffany · Assistant JEDCO</p>
+                <button onClick={closeChat} type="button" className="rounded-md border border-white/30 px-2 py-1 text-xs text-white/90 hover:bg-white/10">
+                  Fermer
+                </button>
+              </div>
+              <form onSubmit={handleSubmitInfos} className="space-y-4 p-5">
+                <p className="text-sm text-slate-600">
+                  Avant de commencer, comment pouvons-nous vous joindre si la conversation continue plus tard ?
+                </p>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Votre nom</label>
+                  <input
+                    required
+                    autoFocus
+                    value={nomVisiteur}
+                    onChange={(e) => setNomVisiteur(e.target.value)}
+                    placeholder="Ex : Jean Baptiste"
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Votre téléphone</label>
+                  <input
+                    required
+                    type="tel"
+                    value={telephoneVisiteur}
+                    onChange={(e) => setTelephoneVisiteur(e.target.value)}
+                    placeholder="Ex : 3712-3456"
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30"
+                  />
+                </div>
+                <button type="submit" className="w-full rounded-lg bg-jedco px-5 py-2.5 text-sm font-semibold text-white hover:bg-jedco-light transition">
+                  Continuer
+                </button>
+              </form>
             </div>
           ) : (
             <div>

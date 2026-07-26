@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ChatProvider } from "./components/ChatContext";
-import ChatWidget from "./components/ChatWidget";
+import ChatWidgetGate from "./components/ChatWidgetGate";
 import FadeUpObserver from "./components/FadeUpObserver";
 
 const inter = Inter({
@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} bg-white text-slate-800 font-sans antialiased`}>
         <ChatProvider>
           {children}
-          <ChatWidget />
+          <ChatWidgetGate />
         </ChatProvider>
         <FadeUpObserver />
       </body>

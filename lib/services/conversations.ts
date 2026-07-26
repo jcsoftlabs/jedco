@@ -13,11 +13,17 @@ const INCLUDE_MESSAGES = {
   messages: { orderBy: { createdAt: "asc" } },
 } as const;
 
-export async function obtenirOuCreerConversation(sessionId: string) {
+export async function obtenirOuCreerConversation(
+  sessionId: string,
+  infos?: { nom?: string; telephone?: string }
+) {
   return prisma.conversation.upsert({
     where: { sessionId },
-    create: { sessionId },
-    update: {},
+    create: { sessionId, nom: infos?.nom, telephone: infos?.telephone },
+    // Uniquement si fourni : le sondage GET du widget appelle cette même
+    // fonction sans infos à chaque poll, ça ne doit jamais effacer un nom
+    // déjà enregistré.
+    update: infos?.nom || infos?.telephone ? { nom: infos?.nom, telephone: infos?.telephone } : {},
     include: INCLUDE_MESSAGES,
   });
 }
@@ -75,8 +81,12 @@ async function appellerIA(message: string): Promise<string> {
 // l'IA si la conversation est encore en mode IA, bascule vers un agent humain
 // dès le premier échec technique (clé absente, panne, quota) plutôt que de
 // réessayer indéfiniment — Tiffany ne fait qu'un seul essai par message.
-export async function traiterMessageVisiteur(sessionId: string, message: string) {
-  const conversation = await obtenirOuCreerConversation(sessionId);
+export async function traiterMessageVisiteur(
+  sessionId: string,
+  message: string,
+  infos?: { nom?: string; telephone?: string }
+) {
+  const conversation = await obtenirOuCreerConversation(sessionId, infos);
 
   // Un message sur une conversation fermée rouvre un ticket — jamais un
   // visiteur qui écrit à nouveau ne doit tomber dans un silence côté agent.

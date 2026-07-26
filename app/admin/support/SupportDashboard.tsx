@@ -9,6 +9,8 @@ type Conversation = {
   id: string;
   statut: "IA" | "EN_ATTENTE_AGENT" | "PRISE_EN_CHARGE" | "FERMEE";
   agentId: string | null;
+  nom: string | null;
+  telephone: string | null;
   updatedAt: string;
   messages: Message[];
 };
@@ -166,10 +168,14 @@ export default function SupportDashboard() {
                       : "border-amber-300 bg-amber-50 hover:bg-amber-100"
                   }`}
                 >
-                  <p className="font-medium text-jedco-dark">
-                    {c.messages.filter((m) => m.role === "VISITEUR").at(-1)?.contenu.slice(0, 60) || "Nouveau visiteur"}
+                  <p className="font-medium text-jedco-dark">{c.nom || "Visiteur anonyme"}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {c.messages.filter((m) => m.role === "VISITEUR").at(-1)?.contenu.slice(0, 60)}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">{new Date(c.updatedAt).toLocaleTimeString("fr-FR")}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {c.telephone && `${c.telephone} · `}
+                    {new Date(c.updatedAt).toLocaleTimeString("fr-FR")}
+                  </p>
                 </button>
               ))}
             </div>
@@ -192,10 +198,12 @@ export default function SupportDashboard() {
                     c.id === conversationOuverteId ? "border-jedco bg-jedco/5" : "border-slate-200 bg-white hover:bg-slate-50"
                   }`}
                 >
-                  <p className="font-medium text-jedco-dark">
-                    {c.messages.at(-1)?.contenu.slice(0, 60) || "Conversation"}
+                  <p className="font-medium text-jedco-dark">{c.nom || "Visiteur anonyme"}</p>
+                  <p className="truncate text-xs text-slate-500">{c.messages.at(-1)?.contenu.slice(0, 60)}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {c.telephone && `${c.telephone} · `}
+                    {new Date(c.updatedAt).toLocaleTimeString("fr-FR")}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">{new Date(c.updatedAt).toLocaleTimeString("fr-FR")}</p>
                 </button>
               ))}
             </div>
@@ -211,17 +219,25 @@ export default function SupportDashboard() {
         ) : (
           <>
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  conversationOuverte.statut === "EN_ATTENTE_AGENT"
-                    ? "bg-amber-100 text-amber-700"
-                    : conversationOuverte.statut === "FERMEE"
-                      ? "bg-slate-200 text-slate-500"
-                      : "bg-emerald-100 text-emerald-700"
-                }`}
-              >
-                {conversationOuverte.statut.replace(/_/g, " ")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    conversationOuverte.statut === "EN_ATTENTE_AGENT"
+                      ? "bg-amber-100 text-amber-700"
+                      : conversationOuverte.statut === "FERMEE"
+                        ? "bg-slate-200 text-slate-500"
+                        : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {conversationOuverte.statut.replace(/_/g, " ")}
+                </span>
+                <span className="text-sm font-medium text-jedco-dark">{conversationOuverte.nom || "Visiteur anonyme"}</span>
+                {conversationOuverte.telephone && (
+                  <a href={`tel:${conversationOuverte.telephone}`} className="text-xs text-jedco hover:underline">
+                    {conversationOuverte.telephone}
+                  </a>
+                )}
+              </div>
               <div className="flex gap-2">
                 {conversationOuverte.statut === "EN_ATTENTE_AGENT" && (
                   <button

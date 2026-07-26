@@ -162,4 +162,29 @@ describe("module Conversations — Tiffany hybride IA/humain (intégration réel
     const resultat = await traiterMessageVisiteur(sessionId, "En fait ça ne marche toujours pas");
     expect(resultat.statut).toBe("EN_ATTENTE_AGENT");
   });
+
+  it("enregistre le nom et le téléphone du visiteur donnés avec le premier message", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: {} }) }));
+    const sessionId = `test-session-${Date.now()}-i`;
+
+    await traiterMessageVisiteur(sessionId, "Bonjour", { nom: "Jean Baptiste", telephone: "3712-3456" });
+    const conversation = await obtenirOuCreerConversation(sessionId);
+    idsConversations.push(conversation.id);
+
+    expect(conversation.nom).toBe("Jean Baptiste");
+    expect(conversation.telephone).toBe("3712-3456");
+  });
+
+  it("le sondage sans infos (GET du widget) n'efface jamais un nom déjà enregistré", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: {} }) }));
+    const sessionId = `test-session-${Date.now()}-j`;
+
+    await traiterMessageVisiteur(sessionId, "Bonjour", { nom: "Wislande Étienne" });
+    const premiereLecture = await obtenirOuCreerConversation(sessionId);
+    idsConversations.push(premiereLecture.id);
+
+    // Simule le sondage périodique du widget, qui n'envoie jamais d'infos.
+    const deuxiemeLecture = await obtenirOuCreerConversation(sessionId);
+    expect(deuxiemeLecture.nom).toBe("Wislande Étienne");
+  });
 });

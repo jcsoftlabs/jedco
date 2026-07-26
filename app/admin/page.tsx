@@ -94,6 +94,11 @@ export default async function AdminHomePage() {
   // ce tableau de bord, plein de chiffres réservés à ADMIN/SUPERVISEUR, ne lui
   // sert à rien. Terrain est l'écran conçu pour son usage quotidien.
   if (user.role === "TECHNICIEN") redirect("/admin/terrain");
+  // Un SUPPORT n'a accès qu'aux conversations — ce tableau (chiffre
+  // d'affaires, encaissé, revenus par service) n'a aucune vérification de
+  // rôle propre, contrairement aux autres pages admin : sans cette
+  // redirection explicite, il verrait des données financières internes.
+  if (user.role === "SUPPORT") redirect("/admin/support");
 
   const [stats, typesService] = await Promise.all([statsPilotage(), listerTypesService()]);
   const libellesService = Object.fromEntries(typesService.map((t) => [t.code, t.libelle]));
