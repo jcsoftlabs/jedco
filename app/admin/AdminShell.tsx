@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
 
@@ -54,6 +54,44 @@ const LIENS_TECHNICIEN: Lien[] = [
   { href: "/admin/interventions", label: "Interventions", icone: <Icone d={I.interventions} /> },
 ];
 
+function Spinner({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={`h-4 w-4 shrink-0 animate-spin ${className}`} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Composant séparé parce que useLinkStatus doit être appelé DANS un descendant
+// du <Link> auquel il se rapporte — appelé au niveau de la liste, il ne verrait
+// aucune navigation. Il expose l'état "en attente" du lien cliqué, ce qui
+// permet de remplacer son icône par un spinner : le repère est sur l'élément
+// que l'admin vient de cliquer, pas seulement dans la zone de contenu.
+function LienNav({ lien, actif, compact }: { lien: Lien; actif: boolean; compact: boolean }) {
+  return (
+    <Link
+      href={lien.href}
+      title={compact ? lien.label : undefined}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+        actif ? "bg-jedco text-white font-medium shadow-sm" : "text-slate-300 hover:bg-white/10 hover:text-white"
+      } ${compact ? "justify-center px-2" : ""}`}
+    >
+      <ContenuLienNav lien={lien} compact={compact} />
+    </Link>
+  );
+}
+
+function ContenuLienNav({ lien, compact }: { lien: Lien; compact: boolean }) {
+  const { pending } = useLinkStatus();
+  return (
+    <>
+      {pending ? <Spinner className="h-5 w-5" /> : lien.icone}
+      {!compact && <span className="truncate">{lien.label}</span>}
+    </>
+  );
+}
+
 export default function AdminShell({
   user,
   children,
@@ -101,24 +139,9 @@ export default function AdminShell({
   // n'affichait alors que des icônes sans texte.
   const navigation = (compact: boolean) => (
     <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-      {liens.map((lien) => {
-        const actif = estActif(lien.href);
-        return (
-          <Link
-            key={lien.href}
-            href={lien.href}
-            title={compact ? lien.label : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-              actif
-                ? "bg-jedco text-white font-medium shadow-sm"
-                : "text-slate-300 hover:bg-white/10 hover:text-white"
-            } ${compact ? "justify-center px-2" : ""}`}
-          >
-            {lien.icone}
-            {!compact && <span className="truncate">{lien.label}</span>}
-          </Link>
-        );
-      })}
+      {liens.map((lien) => (
+        <LienNav key={lien.href} lien={lien} actif={estActif(lien.href)} compact={compact} />
+      ))}
     </nav>
   );
 
