@@ -2,6 +2,7 @@ import Link from "next/link";
 import LogoutButton from "./LogoutButton";
 
 const LIENS_ADMIN_SUPERVISEUR = [
+  { href: "/admin/demandes", label: "Demandes" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/contrats", label: "Contrats" },
   { href: "/admin/interventions", label: "Interventions" },

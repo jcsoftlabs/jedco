@@ -4,21 +4,51 @@ import { useState } from "react";
 import FadeUp from "./FadeUp";
 
 const SERVICES = [
-  "Vidange de fosses septiques",
-  "Collecte d'ordures",
-  "Toilettes mobiles",
-  "Pest Control",
-  "Nettoyage industriel",
-  "Contrats municipaux",
+  { value: "VIDANGE", label: "Vidange de fosses septiques" },
+  { value: "COLLECTE", label: "Collecte d'ordures" },
+  { value: "TOILETTE_MOBILE", label: "Toilettes mobiles" },
+  { value: "PEST_CONTROL", label: "Pest Control" },
+  { value: "NETTOYAGE", label: "Nettoyage industriel" },
+  { value: "AUTRE", label: "Contrats municipaux" },
 ];
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
-    e.currentTarget.reset();
+    setErreur(null);
+    setEnvoi(true);
+    const fd = new FormData(e.currentTarget);
+
+    try {
+      const res = await fetch("/api/public/demandes-devis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nom: fd.get("name"),
+          telephone: fd.get("phone"),
+          service: fd.get("service"),
+          ville: fd.get("zone"),
+          message: fd.get("message") || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErreur(
+          data.error ?? "Une erreur est survenue. Vous pouvez aussi nous appeler au 2942-1109 / 2942-1110."
+        );
+        return;
+      }
+      setSubmitted(true);
+      e.currentTarget.reset();
+    } catch {
+      setErreur("Connexion impossible. Vous pouvez aussi nous appeler au 2942-1109 / 2942-1110.");
+    } finally {
+      setEnvoi(false);
+    }
   }
 
   return (
@@ -45,7 +75,9 @@ export default function ContactForm() {
                 <select id="service" name="service" required className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30">
                   <option value="">Sélectionnez un service</option>
                   {SERVICES.map((s) => (
-                    <option key={s}>{s}</option>
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -56,15 +88,22 @@ export default function ContactForm() {
             </div>
             <div>
               <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-1">Message</label>
-              <textarea id="message" name="message" rows={4} required className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30" />
+              <textarea id="message" name="message" rows={4} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30" />
             </div>
-            <button type="submit" className="w-full rounded-lg bg-jedco px-6 py-3 text-sm font-semibold text-white hover:bg-jedco-light transition">
-              Envoyer la demande
+            <button
+              type="submit"
+              disabled={envoi}
+              className="w-full rounded-lg bg-jedco px-6 py-3 text-sm font-semibold text-white hover:bg-jedco-light transition disabled:opacity-60"
+            >
+              {envoi ? "Envoi en cours…" : "Envoyer la demande"}
             </button>
             {submitted && (
               <p className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
                 Merci, votre demande a bien été envoyée. Notre équipe vous contactera rapidement.
               </p>
+            )}
+            {erreur && (
+              <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{erreur}</p>
             )}
           </form>
         </FadeUp>
