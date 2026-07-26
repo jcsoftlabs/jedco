@@ -8,12 +8,27 @@ import {
   formatUSD,
   type Centimes,
 } from "@/lib/money";
-import type { Facture, LigneFacture, Client, Paiement } from "@/app/generated/prisma/client";
+import type { Facture, LigneFacture, Devis, LigneDevis, Client, Paiement } from "@/app/generated/prisma/client";
 
 type FactureAvecDetails = Facture & {
   lignes: LigneFacture[];
   client: Client;
   paiements?: Paiement[];
+};
+
+type DevisAvecDetails = Devis & {
+  lignes: LigneDevis[];
+  client: Client;
+};
+
+// Forme commune aux lignes de Facture et de Devis — suffisante pour dessiner
+// le tableau et les totaux sans dupliquer cette logique entre les deux
+// documents (mêmes colonnes, mêmes calculs).
+type LigneMontant = {
+  description: string;
+  quantite: number;
+  prixUnitaireHTG: Centimes;
+  totalHTG: Centimes;
 };
 
 // ─── Charte graphique ────────────────────────────────────────────────────────
@@ -54,6 +69,33 @@ const FOND_STATUT: Record<string, string> = {
   PAYEE: "#E9F6EE",
   EN_RETARD: "#FBEAEA",
   ANNULEE: "#EFEFEF",
+};
+
+const LIBELLE_STATUT_DEVIS: Record<string, string> = {
+  BROUILLON: "BROUILLON",
+  ENVOYE: "ENVOYÉ",
+  ACCEPTE: "ACCEPTÉ",
+  REFUSE: "REFUSÉ",
+  EXPIRE: "EXPIRÉ",
+  CONVERTI: "CONVERTI EN FACTURE",
+};
+
+const COULEUR_STATUT_DEVIS: Record<string, string> = {
+  BROUILLON: "#5A5A5A",
+  ENVOYE: "#8A6D1F",
+  ACCEPTE: "#1F6B3F",
+  REFUSE: "#A31D1D",
+  EXPIRE: "#8A5A1F",
+  CONVERTI: "#013298",
+};
+
+const FOND_STATUT_DEVIS: Record<string, string> = {
+  BROUILLON: "#EFEFEF",
+  ENVOYE: "#FDF6E3",
+  ACCEPTE: "#E9F6EE",
+  REFUSE: "#FBEAEA",
+  EXPIRE: "#FDF0E3",
+  CONVERTI: "#E9EEFB",
 };
 
 function formatDate(date: Date): string {
@@ -107,10 +149,32 @@ export async function genererFacturePDF(facture: FactureAvecDetails): Promise<Bu
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    dessinerEntete(doc, facture);
-    const yApresBlocs = dessinerBlocsInfos(doc, facture);
-    const yApresTableau = dessinerTableau(doc, facture, yApresBlocs);
-    const yApresTotaux = dessinerTotaux(doc, facture, yApresTableau);
+    dessinerEntete(doc);
+    const lignesDates: [string, string][] = [
+      ["Date d'émission", formatDate(facture.dateEmission)],
+      ["Échéance", formatDate(facture.dateEcheance)],
+    ];
+    if (facture.periode) lignesDates.push(["Période", facture.periode]);
+    if (facture.datePaiement) lignesDates.push(["Payée le", formatDate(facture.datePaiement)]);
+
+    const yApresBlocs = dessinerBlocsInfo(doc, {
+      titre: "FACTURE",
+      reference: facture.reference,
+      statutLibelle: LIBELLE_STATUT[facture.statut] ?? facture.statut,
+      statutCouleur: COULEUR_STATUT[facture.statut] ?? GRIS_TEXTE,
+      statutFond: FOND_STATUT[facture.statut] ?? GRIS_FOND,
+      client: facture.client,
+      lignesDates,
+    });
+    const yApresTableau = dessinerTableau(doc, facture.lignes, yApresBlocs);
+    const yApresTotaux = dessinerTotaux(
+      doc,
+      facture.montantHTG,
+      facture.taxeHTG,
+      facture.totalHTG,
+      facture.tauxUsdApplique,
+      yApresTableau
+    );
     dessinerPaiementsEtNotes(doc, facture, yApresTotaux);
     dessinerPiedDePage(doc);
 
@@ -118,7 +182,45 @@ export async function genererFacturePDF(facture: FactureAvecDetails): Promise<Bu
   });
 }
 
-function dessinerEntete(doc: PDFKit.PDFDocument, facture: FactureAvecDetails) {
+export async function genererDevisPDF(devis: DevisAvecDetails): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: MARGE, bufferPages: true });
+    const chunks: Buffer[] = [];
+    doc.on("data", (c) => chunks.push(c));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    dessinerEntete(doc);
+    const yApresBlocs = dessinerBlocsInfo(doc, {
+      titre: "DEVIS",
+      reference: devis.reference,
+      statutLibelle: LIBELLE_STATUT_DEVIS[devis.statut] ?? devis.statut,
+      statutCouleur: COULEUR_STATUT_DEVIS[devis.statut] ?? GRIS_TEXTE,
+      statutFond: FOND_STATUT_DEVIS[devis.statut] ?? GRIS_FOND,
+      client: devis.client,
+      lignesDates: [
+        ["Date d'émission", formatDate(devis.dateEmission)],
+        ["Valable jusqu'au", formatDate(devis.dateValidite)],
+      ],
+    });
+    const yApresTableau = dessinerTableau(doc, devis.lignes, yApresBlocs);
+    const yApresTotaux = dessinerTotaux(
+      doc,
+      devis.montantHTG,
+      devis.taxeHTG,
+      devis.totalHTG,
+      devis.tauxUsdApplique,
+      yApresTableau,
+      "TOTAL ESTIMÉ"
+    );
+    if (devis.notes) dessinerNotes(doc, devis.notes, yApresTotaux);
+    dessinerPiedDePage(doc);
+
+    doc.end();
+  });
+}
+
+function dessinerEntete(doc: PDFKit.PDFDocument) {
   const logo = chargerLogo();
   const hautLogo = MARGE;
 
@@ -149,24 +251,32 @@ function dessinerEntete(doc: PDFKit.PDFDocument, facture: FactureAvecDetails) {
   doc.rect(MARGE, yFilet + 3, LARGEUR_UTILE * 0.28, 3).fill(BLEU_SOMBRE);
 }
 
-function dessinerBlocsInfos(doc: PDFKit.PDFDocument, facture: FactureAvecDetails): number {
+function dessinerBlocsInfo(
+  doc: PDFKit.PDFDocument,
+  opts: {
+    titre: string;
+    reference: string;
+    statutLibelle: string;
+    statutCouleur: string;
+    statutFond: string;
+    client: Client;
+    lignesDates: [string, string][];
+  }
+): number {
   const yDepart = MARGE + 82;
 
   // Titre + référence, à gauche.
-  doc.font("Helvetica-Bold").fontSize(24).fillColor(BLEU_SOMBRE).text("FACTURE", MARGE, yDepart);
-  doc.font("Helvetica-Bold").fontSize(12).fillColor(BLEU).text(facture.reference, MARGE, yDepart + 27);
+  doc.font("Helvetica-Bold").fontSize(24).fillColor(BLEU_SOMBRE).text(opts.titre, MARGE, yDepart);
+  doc.font("Helvetica-Bold").fontSize(12).fillColor(BLEU).text(opts.reference, MARGE, yDepart + 27);
 
   // Pastille de statut, à droite.
-  const statut = facture.statut;
-  const libelle = LIBELLE_STATUT[statut] ?? statut;
+  const libelle = opts.statutLibelle;
   doc.font("Helvetica-Bold").fontSize(8);
   const largeurPastille = doc.widthOfString(libelle) + 20;
   const xPastille = LARGEUR_PAGE - MARGE - largeurPastille;
+  doc.roundedRect(xPastille, yDepart + 4, largeurPastille, 19, 9.5).fill(opts.statutFond);
   doc
-    .roundedRect(xPastille, yDepart + 4, largeurPastille, 19, 9.5)
-    .fill(FOND_STATUT[statut] ?? GRIS_FOND);
-  doc
-    .fillColor(COULEUR_STATUT[statut] ?? GRIS_TEXTE)
+    .fillColor(opts.statutCouleur)
     .text(libelle, xPastille, yDepart + 10, { width: largeurPastille, align: "center" });
 
   // Deux encadrés côte à côte : destinataire et dates.
@@ -180,27 +290,21 @@ function dessinerBlocsInfos(doc: PDFKit.PDFDocument, facture: FactureAvecDetails
   doc.font("Helvetica-Bold").fontSize(7.5).fillColor(BLEU);
   doc.text("FACTURER À", MARGE + 12, yBlocs + 11, { characterSpacing: 0.6 });
   doc.font("Helvetica-Bold").fontSize(11).fillColor(GRIS_TEXTE);
-  doc.text(facture.client.nom, MARGE + 12, yBlocs + 25, { width: largeurGauche - 24 });
+  doc.text(opts.client.nom, MARGE + 12, yBlocs + 25, { width: largeurGauche - 24 });
   doc.font("Helvetica").fontSize(8.5).fillColor(GRIS_DOUX);
-  doc.text(`Code client : ${facture.client.code}`, MARGE + 12, doc.y + 2, {
+  doc.text(`Code client : ${opts.client.code}`, MARGE + 12, doc.y + 2, {
     width: largeurGauche - 24,
   });
-  const adresse = [facture.client.adresse, facture.client.ville].filter(Boolean).join(", ");
+  const adresse = [opts.client.adresse, opts.client.ville].filter(Boolean).join(", ");
   if (adresse) doc.text(adresse, MARGE + 12, doc.y, { width: largeurGauche - 24 });
-  if (facture.client.telephone) {
-    doc.text(`Tél : ${facture.client.telephone}`, MARGE + 12, doc.y, { width: largeurGauche - 24 });
+  if (opts.client.telephone) {
+    doc.text(`Tél : ${opts.client.telephone}`, MARGE + 12, doc.y, { width: largeurGauche - 24 });
   }
 
   doc.roundedRect(xDroite, yBlocs, largeurDroite, hauteurBloc, 4).fill(GRIS_FOND);
-  const lignesDates: [string, string][] = [
-    ["Date d'émission", formatDate(facture.dateEmission)],
-    ["Échéance", formatDate(facture.dateEcheance)],
-  ];
-  if (facture.periode) lignesDates.push(["Période", facture.periode]);
-  if (facture.datePaiement) lignesDates.push(["Payée le", formatDate(facture.datePaiement)]);
 
   let yLigne = yBlocs + 12;
-  for (const [etiquette, valeur] of lignesDates) {
+  for (const [etiquette, valeur] of opts.lignesDates) {
     doc.font("Helvetica").fontSize(8).fillColor(GRIS_DOUX);
     doc.text(etiquette, xDroite + 12, yLigne, { width: largeurDroite - 24 });
     doc.font("Helvetica-Bold").fontSize(9).fillColor(GRIS_TEXTE);
@@ -213,7 +317,7 @@ function dessinerBlocsInfos(doc: PDFKit.PDFDocument, facture: FactureAvecDetails
 
 function dessinerTableau(
   doc: PDFKit.PDFDocument,
-  facture: FactureAvecDetails,
+  lignes: LigneMontant[],
   yDepart: number
 ): number {
   const colDescription = LARGEUR_UTILE * 0.46;
@@ -238,7 +342,7 @@ function dessinerTableau(
   let y = yDepart + hauteurEntete;
   const hauteurLigne = 22;
 
-  facture.lignes.forEach((ligne, index) => {
+  lignes.forEach((ligne, index) => {
     if (index % 2 === 1) doc.rect(MARGE, y, LARGEUR_UTILE, hauteurLigne).fill(GRIS_FOND);
 
     const yTexte = y + 7;
@@ -268,22 +372,25 @@ function dessinerTableau(
 
 function dessinerTotaux(
   doc: PDFKit.PDFDocument,
-  facture: FactureAvecDetails,
-  yDepart: number
+  montantHTG: Centimes,
+  taxeHTG: Centimes,
+  totalHTG: Centimes,
+  tauxUsdApplique: number | null,
+  yDepart: number,
+  libelleTotal = "TOTAL DÛ"
 ): number {
   const largeurBloc = 250;
   const xBloc = LARGEUR_PAGE - MARGE - largeurBloc;
   let y = yDepart;
 
-  const tauxTaxePourcent =
-    facture.montantHTG > 0n ? Number((facture.taxeHTG * 10_000n) / facture.montantHTG) / 100 : 0;
+  const tauxTaxePourcent = montantHTG > 0n ? Number((taxeHTG * 10_000n) / montantHTG) / 100 : 0;
 
-  const lignes: [string, string][] = [
-    ["Sous-total", texteMonetaire(facture.montantHTG)],
-    [`Taxe (${tauxTaxePourcent} %)`, texteMonetaire(facture.taxeHTG)],
+  const lignesTotaux: [string, string][] = [
+    ["Sous-total", texteMonetaire(montantHTG)],
+    [`Taxe (${tauxTaxePourcent} %)`, texteMonetaire(taxeHTG)],
   ];
 
-  for (const [etiquette, valeur] of lignes) {
+  for (const [etiquette, valeur] of lignesTotaux) {
     doc.font("Helvetica").fontSize(9.5).fillColor(GRIS_DOUX);
     doc.text(etiquette, xBloc, y, { width: largeurBloc * 0.5 });
     doc.font("Helvetica").fontSize(9.5).fillColor(GRIS_TEXTE);
@@ -291,25 +398,25 @@ function dessinerTotaux(
     y += 16;
   }
 
-  // Bandeau du total dû, aux couleurs de la marque.
+  // Bandeau du total, aux couleurs de la marque.
   y += 4;
   const hauteurTotal = 32;
   doc.roundedRect(xBloc, y, largeurBloc, hauteurTotal, 4).fill(BLEU);
   doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#FFFFFF");
-  doc.text("TOTAL DÛ", xBloc + 12, y + 11, { width: largeurBloc * 0.4 });
+  doc.text(libelleTotal, xBloc + 12, y + 11, { width: largeurBloc * 0.4 });
   doc.font("Helvetica-Bold").fontSize(13).fillColor("#FFFFFF");
-  doc.text(texteMonetaire(facture.totalHTG), xBloc + largeurBloc * 0.4, y + 9, {
+  doc.text(texteMonetaire(totalHTG), xBloc + largeurBloc * 0.4, y + 9, {
     width: largeurBloc * 0.6 - 12,
     align: "right",
   });
   y += hauteurTotal + 6;
 
   // Équivalent USD au taux figé à l'émission (§1.11) — jamais le taux courant,
-  // sinon le montant affiché sur une facture déjà émise changerait avec le
-  // cours de la gourde.
-  if (facture.tauxUsdApplique) {
-    const usd = centimesEnUSDAvecTauxFige(facture.totalHTG, facture.tauxUsdApplique);
-    const taux = decoderTaux(facture.tauxUsdApplique);
+  // sinon le montant affiché changerait après coup avec le cours de la
+  // gourde, aussi bien sur une facture déjà émise que sur un devis déjà remis.
+  if (tauxUsdApplique) {
+    const usd = centimesEnUSDAvecTauxFige(totalHTG, tauxUsdApplique);
+    const taux = decoderTaux(tauxUsdApplique);
     doc.font("Helvetica-Oblique").fontSize(8).fillColor(GRIS_DOUX);
     doc.text(`Équivalent indicatif : ${formatUSD(usd)} (taux figé 1 USD = ${taux} HTG)`, xBloc, y, {
       width: largeurBloc,
@@ -364,6 +471,13 @@ function dessinerPaiementsEtNotes(
     doc.font("Helvetica").fontSize(8.5).fillColor(GRIS_DOUX);
     doc.text(facture.notes, MARGE, y, { width: LARGEUR_UTILE * 0.7 });
   }
+}
+
+function dessinerNotes(doc: PDFKit.PDFDocument, notes: string, yDepart: number) {
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(BLEU);
+  doc.text("NOTES", MARGE, yDepart, { characterSpacing: 0.6 });
+  doc.font("Helvetica").fontSize(8.5).fillColor(GRIS_DOUX);
+  doc.text(notes, MARGE, yDepart + 12, { width: LARGEUR_UTILE * 0.7 });
 }
 
 function dessinerPiedDePage(doc: PDFKit.PDFDocument) {

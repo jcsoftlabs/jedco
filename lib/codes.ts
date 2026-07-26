@@ -5,13 +5,14 @@ import { prisma } from "@/lib/db";
 // contrairement à un "lire le max, ajouter 1" côté application qui produit
 // des doublons sous concurrence.
 
-type Prefixe = "JED" | "CTR" | "INT" | "FAC" | "TECH" | "TLT";
+type Prefixe = "JED" | "CTR" | "INT" | "FAC" | "DEV" | "TECH" | "TLT";
 
 const SEQUENCES: Record<Prefixe, string> = {
   JED: "jed_client_seq",
   CTR: "jed_contrat_seq",
   INT: "jed_intervention_seq",
   FAC: "jed_facture_seq",
+  DEV: "jed_devis_seq",
   TECH: "jed_technicien_seq",
   TLT: "jed_toilette_seq",
 };
@@ -45,6 +46,11 @@ export async function referenceIntervention(): Promise<string> {
 export async function referenceFacture(): Promise<string> {
   const annee = new Date().getFullYear();
   return `FAC-${annee}-${pad(await prochainNumero("FAC"), 4)}`;
+}
+
+export async function referenceDevis(): Promise<string> {
+  const annee = new Date().getFullYear();
+  return `DEV-${annee}-${pad(await prochainNumero("DEV"), 4)}`;
 }
 
 export async function matriculeTechnicien(): Promise<string> {

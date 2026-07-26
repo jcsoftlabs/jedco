@@ -91,6 +91,15 @@ enum ModePaiement {
   CHEQUE
 }
 
+enum StatutDevis {
+  BROUILLON
+  ENVOYE
+  ACCEPTE
+  REFUSE
+  EXPIRE
+  CONVERTI
+}
+
 // ─── AUTH & AUDIT (nouveau — §1.6, §1.10) ────────────────────────────────────
 
 model User {
@@ -158,6 +167,7 @@ model Client {
   contrats      Contrat[]
   interventions Intervention[]
   factures      Facture[]
+  devis         Devis[]
   toilettes     ToiletteMobile[]
   deletedAt     DateTime?
   createdAt     DateTime         @default(now())
@@ -391,6 +401,46 @@ model Paiement {
   datePaiement   DateTime     @default(now())
   createdBy      String
   createdAt      DateTime     @default(now())
+}
+
+// Devis (quotation) distinct d'une facture impayée : pas de contrainte de
+// séquence comptable ni des obligations fiscales d'une facture émise (§2.x).
+// Cycle de vie BROUILLON → ENVOYE → ACCEPTE/REFUSE/EXPIRE, avec un passage
+// possible vers CONVERTI une fois transformé en Facture (factureId renseigné).
+model Devis {
+  id              String       @id @default(cuid())
+  reference       String       @unique // DEV-2026-0001
+  clientId        String
+  client          Client       @relation(fields: [clientId], references: [id])
+  lignes          LigneDevis[]
+  montantHTG      BigInt
+  taxeHTG         BigInt       @default(0)
+  totalHTG        BigInt
+  tauxUsdApplique Int?
+  statut          StatutDevis  @default(BROUILLON)
+  dateEmission    DateTime     @default(now())
+  dateValidite    DateTime
+  // Renseigné lors de la conversion en facture — un devis ne peut être
+  // converti qu'une seule fois (voir lib/services/devis.ts).
+  factureId       String?      @unique
+  notes           String?
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([clientId, statut])
+}
+
+model LigneDevis {
+  id              String       @id @default(cuid())
+  devisId         String
+  devis           Devis        @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  description     String
+  service         TypeService?
+  quantite        Int          @default(1)
+  prixUnitaireHTG BigInt
+  totalHTG        BigInt
+  ordre           Int          @default(0)
 }
 
 // ─── DEMANDES PUBLIQUES ──────────────────────────────────────────────────────

@@ -33,6 +33,9 @@ export default function AdminHeader({
         <Link href="/admin/factures" className="px-3 py-2 text-sm text-slate-600 hover:text-jedco">
           Facturation
         </Link>
+        <Link href="/admin/devis" className="px-3 py-2 text-sm text-slate-600 hover:text-jedco">
+          Devis
+        </Link>
       </nav>
     </header>
   );
