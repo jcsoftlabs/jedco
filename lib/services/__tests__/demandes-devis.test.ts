@@ -1,13 +1,20 @@
 import "dotenv/config";
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
-import { creerDemandeDevis, listerDemandesDevis, marquerDemandeDevisTraitee } from "../demandes-devis";
+import {
+  creerDemandeDevis,
+  listerDemandesDevis,
+  marquerDemandeDevisTraitee,
+  convertirDemandeEnClient,
+} from "../demandes-devis";
 
 describe("module DemandesDevis — formulaire public (intégration réelle)", () => {
   const idsDemandes: string[] = [];
+  const idsClients: string[] = [];
 
   afterAll(async () => {
     await prisma.demandeDevis.deleteMany({ where: { id: { in: idsDemandes } } });
+    await prisma.client.deleteMany({ where: { id: { in: idsClients } } });
     await prisma.$disconnect();
   });
 
@@ -72,5 +79,44 @@ describe("module DemandesDevis — formulaire public (intégration réelle)", ()
 
     const { data: traitees } = await listerDemandesDevis({ page: 1, limit: 100, traite: true });
     expect(traitees.some((d) => d.id === demande.id)).toBe(false);
+  });
+
+  it("convertit une demande en client, la marque traitée, et reprend le client existant en cas de doublon", async () => {
+    const telephone = `+509 9${Date.now()}`;
+    const demande = await creerDemandeDevis({
+      nom: `Test Conversion ${Date.now()}`,
+      telephone,
+      email: "prospect@example.com",
+      service: "VIDANGE",
+      ville: "Léogâne",
+    });
+    idsDemandes.push(demande.id);
+
+    const resultat = await convertirDemandeEnClient(demande.id);
+    idsClients.push(resultat!.client.id);
+
+    expect(resultat!.client.nom).toBe(demande.nom);
+    expect(resultat!.client.telephone).toBe(telephone);
+    expect(resultat!.client.email).toBe("prospect@example.com");
+
+    const demandeMiseAJour = await prisma.demandeDevis.findUnique({ where: { id: demande.id } });
+    expect(demandeMiseAJour?.traite).toBe(true);
+
+    // Une seconde demande avec le même téléphone (même prospect qui
+    // resoumet, ou déjà client) ne doit pas créer un second Client en double.
+    const secondeDemande = await creerDemandeDevis({
+      nom: demande.nom,
+      telephone,
+      service: "COLLECTE",
+      ville: "Léogâne",
+    });
+    idsDemandes.push(secondeDemande.id);
+
+    const secondResultat = await convertirDemandeEnClient(secondeDemande.id);
+    expect(secondResultat!.client.id).toBe(resultat!.client.id);
+  });
+
+  it("convertirDemandeEnClient renvoie null pour un id inexistant", async () => {
+    expect(await convertirDemandeEnClient("id-inexistant")).toBeNull();
   });
 });

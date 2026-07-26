@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { ErreurMetier } from "@/lib/errors";
 import { creerFacture } from "@/lib/services/factures";
 import { creerDevis } from "@/lib/services/devis";
-import { envoyerFactureParEmail, envoyerDevisParEmail } from "../notifications";
+import { envoyerFactureParEmail, envoyerDevisParEmail, envoyerNotificationDemandeDevis } from "../notifications";
 
 // RESEND_ENVOI_ACTIF n'est pas positionnée dans l'environnement de test — elle
 // doit donc valoir false par défaut (voir lib/env.ts), et ces tests le
@@ -81,5 +81,25 @@ describe("envoi de factures/devis par e-mail (intégration réelle, sans appel R
   it("renvoie null si la facture ou le devis n'existe pas", async () => {
     expect(await envoyerFactureParEmail("id-inexistant")).toBeNull();
     expect(await envoyerDevisParEmail("id-inexistant")).toBeNull();
+  });
+
+  it("n'envoie aucune notification de demande de devis sans NOTIFICATIONS_EMAIL configurée (ne doit jamais lever)", async () => {
+    // NOTIFICATIONS_EMAIL n'est pas positionnée dans l'environnement de
+    // test — la fonction doit se retirer silencieusement plutôt que
+    // d'échouer, exactement comme app/api/public/demandes-devis/route.ts en
+    // dépend pour ne jamais faire disparaître un lead à cause de l'e-mail.
+    await expect(
+      envoyerNotificationDemandeDevis({
+        id: "x",
+        nom: "Test",
+        telephone: "0000",
+        email: null,
+        service: "VIDANGE",
+        ville: "Port-au-Prince",
+        message: null,
+        traite: false,
+        createdAt: new Date(),
+      })
+    ).resolves.toBeUndefined();
   });
 });

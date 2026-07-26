@@ -1,12 +1,47 @@
 import { obtenirFacture } from "@/lib/services/factures";
 import { obtenirDevis } from "@/lib/services/devis";
 import { genererFacturePDF, genererDevisPDF } from "@/lib/pdf";
-import { envoyerEmailAvecPDF } from "@/lib/email";
+import { envoyerEmailAvecPDF, envoyerEmailSimple } from "@/lib/email";
 import { ErreurMetier } from "@/lib/errors";
 import { formatHTG } from "@/lib/money";
+import { env } from "@/lib/env";
+import type { DemandeDevis } from "@/app/generated/prisma/client";
 
 function formatDateFr(date: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+}
+
+const LIBELLE_SERVICE: Record<string, string> = {
+  VIDANGE: "Vidange de fosses septiques",
+  COLLECTE: "Collecte d'ordures",
+  TOILETTE_MOBILE: "Toilettes mobiles",
+  PEST_CONTROL: "Pest Control",
+  NETTOYAGE: "Nettoyage industriel",
+  AUTRE: "Contrats municipaux / Autre",
+};
+
+// Alerte l'équipe JEDCO à chaque nouvelle demande reçue depuis le formulaire
+// public. NOTIFICATIONS_EMAIL est facultative : sans elle on ne fait rien
+// plutôt que d'échouer — cette fonction ne doit jamais faire échouer la
+// sauvegarde du lead lui-même (voir app/api/public/demandes-devis/route.ts,
+// qui l'appelle dans un try/catch pour la même raison).
+export async function envoyerNotificationDemandeDevis(demande: DemandeDevis): Promise<void> {
+  if (!env.NOTIFICATIONS_EMAIL) return;
+
+  await envoyerEmailSimple({
+    destinataire: env.NOTIFICATIONS_EMAIL,
+    sujet: `Nouvelle demande de devis — ${demande.nom}`,
+    corpsHtml: `<p>Nouvelle demande reçue depuis le site public :</p>
+<ul>
+<li><strong>Nom :</strong> ${demande.nom}</li>
+<li><strong>Téléphone :</strong> ${demande.telephone}</li>
+${demande.email ? `<li><strong>E-mail :</strong> ${demande.email}</li>` : ""}
+<li><strong>Service :</strong> ${LIBELLE_SERVICE[demande.service] ?? demande.service}</li>
+<li><strong>Ville :</strong> ${demande.ville}</li>
+${demande.message ? `<li><strong>Message :</strong> ${demande.message}</li>` : ""}
+</ul>
+<p>À traiter dans le backoffice, section Demandes.</p>`,
+  });
 }
 
 export async function envoyerFactureParEmail(id: string) {

@@ -12,15 +12,21 @@ export default function NouveauDevisForm({
   clients,
   clientIdParDefaut,
   catalogue = [],
+  descriptionParDefaut,
+  ouvrirParDefaut = false,
 }: {
   clients: { id: string; nom: string; code: string }[];
   clientIdParDefaut?: string;
   catalogue?: ArticleCatalogue[];
+  descriptionParDefaut?: string;
+  ouvrirParDefaut?: boolean;
 }) {
   const router = useRouter();
-  const [ouvert, setOuvert] = useState(false);
+  const [ouvert, setOuvert] = useState(ouvrirParDefaut);
   const [clientId, setClientId] = useState(clientIdParDefaut ?? "");
-  const [lignes, setLignes] = useState<Ligne[]>([{ ...LIGNE_VIDE }]);
+  const [lignes, setLignes] = useState<Ligne[]>([
+    { ...LIGNE_VIDE, description: descriptionParDefaut ?? "" },
+  ]);
   const [tauxTaxePourcent, setTauxTaxePourcent] = useState("0");
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);

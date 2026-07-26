@@ -11,7 +11,7 @@ import DevisRow from "./DevisRow";
 export default async function DevisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string }>;
+  searchParams: Promise<{ clientId?: string; description?: string; ouvrir?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -22,7 +22,7 @@ export default async function DevisPage({
     throw e;
   }
 
-  const { clientId } = await searchParams;
+  const { clientId, description, ouvrir } = await searchParams;
 
   const [{ data: devis }, { data: clients }, catalogue] = await Promise.all([
     listerDevis({ page: 1, limit: 50 }),
@@ -39,6 +39,8 @@ export default async function DevisPage({
         <NouveauDevisForm
           clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
           clientIdParDefaut={clientId}
+          descriptionParDefaut={description}
+          ouvrirParDefaut={ouvrir === "1"}
           catalogue={catalogue.map((a) => ({
             nom: a.nom,
             prixSuggereHTG: a.prixSuggereHTG?.toString() ?? null,

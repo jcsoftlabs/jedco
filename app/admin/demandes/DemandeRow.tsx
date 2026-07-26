@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const LIBELLE_SERVICE: Record<string, string> = {
+  VIDANGE: "Vidange de fosses septiques",
+  COLLECTE: "Collecte d'ordures",
+  TOILETTE_MOBILE: "Toilettes mobiles",
+  PEST_CONTROL: "Pest Control",
+  NETTOYAGE: "Nettoyage industriel",
+  AUTRE: "Contrats municipaux / Autre",
+};
+
 export default function DemandeRow({
   demande,
 }: {
@@ -20,6 +29,7 @@ export default function DemandeRow({
 }) {
   const router = useRouter();
   const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   async function basculerTraite() {
     setEnvoi(true);
@@ -30,6 +40,25 @@ export default function DemandeRow({
         body: JSON.stringify({ traite: !demande.traite }),
       });
       router.refresh();
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  async function creerDevis() {
+    setErreur(null);
+    setEnvoi(true);
+    try {
+      const res = await fetch(`/api/demandes-devis/${demande.id}/convertir-client`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErreur(data.error ?? "Erreur");
+        return;
+      }
+      const libelle = LIBELLE_SERVICE[data.data.service] ?? data.data.service;
+      router.push(`/admin/devis?clientId=${data.data.clientId}&description=${encodeURIComponent(libelle)}&ouvrir=1`);
+    } catch {
+      setErreur("Connexion impossible.");
     } finally {
       setEnvoi(false);
     }
@@ -59,18 +88,28 @@ export default function DemandeRow({
           {demande.email && <span> — {demande.email}</span>}
         </p>
         <p>
-          {demande.service} — {demande.ville}
+          {LIBELLE_SERVICE[demande.service] ?? demande.service} — {demande.ville}
         </p>
         {demande.message && <p className="italic text-slate-500">&quot;{demande.message}&quot;</p>}
       </div>
 
-      <button
-        disabled={envoi}
-        onClick={basculerTraite}
-        className="mt-3 text-xs rounded border border-slate-300 px-2 py-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-      >
-        {demande.traite ? "Marquer non traitée" : "Marquer traitée"}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          disabled={envoi}
+          onClick={creerDevis}
+          className="text-xs rounded bg-jedco px-3 py-1.5 font-semibold text-white hover:bg-jedco-light transition disabled:opacity-50"
+        >
+          Créer un devis
+        </button>
+        <button
+          disabled={envoi}
+          onClick={basculerTraite}
+          className="text-xs rounded border border-slate-300 px-2 py-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+        >
+          {demande.traite ? "Marquer non traitée" : "Marquer traitée"}
+        </button>
+      </div>
+      {erreur && <p className="mt-2 text-xs text-red-600">{erreur}</p>}
     </div>
   );
 }

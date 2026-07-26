@@ -32,6 +32,11 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  // Boîte interne JEDCO qui reçoit une alerte à chaque nouvelle demande de
+  // devis publique. Facultative : sans elle, on ne bloque jamais la sauvegarde
+  // du lead (voir lib/services/notifications.ts) — mieux vaut un lead sans
+  // notification qu'un lead perdu parce que l'e-mail interne échoue.
+  NOTIFICATIONS_EMAIL: z.string().optional(),
 });
 
 // Validé une seule fois au premier import — importer ce module tôt (ex. dans

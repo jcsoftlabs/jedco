@@ -30,6 +30,7 @@ export default function ContactForm() {
         body: JSON.stringify({
           nom: fd.get("name"),
           telephone: fd.get("phone"),
+          email: fd.get("email") || undefined,
           service: fd.get("service"),
           ville: fd.get("zone"),
           message: fd.get("message") || undefined,
@@ -68,6 +69,12 @@ export default function ContactForm() {
                 <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">Téléphone</label>
                 <input id="phone" name="phone" type="tel" required className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30" />
               </div>
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+                E-mail <span className="font-normal text-slate-400">(optionnel)</span>
+              </label>
+              <input id="email" name="email" type="email" className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30" />
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
