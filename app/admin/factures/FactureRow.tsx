@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import FacturePreviewModal from "./FacturePreviewModal";
 
 const COULEUR_STATUT: Record<string, string> = {
   EN_ATTENTE: "bg-slate-100 text-slate-700",
@@ -30,6 +31,7 @@ export default function FactureRow({
   };
 }) {
   const router = useRouter();
+  const [apercuOuvert, setApercuOuvert] = useState(false);
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [montant, setMontant] = useState("");
   const [mode, setMode] = useState("CASH");
@@ -85,14 +87,12 @@ export default function FactureRow({
         <td className="px-4">{new Date(facture.dateEcheance).toLocaleDateString("fr-FR")}</td>
         <td className="px-4 py-2">
           <div className="flex gap-2">
-            <a
-              href={`/api/factures/${facture.id}/pdf`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              onClick={() => setApercuOuvert(true)}
               className="text-xs rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100"
             >
-              PDF
-            </a>
+              Aperçu
+            </button>
             {soldable && (
               <button
                 onClick={() => setFormulaireOuvert((v) => !v)}
@@ -144,6 +144,13 @@ export default function FactureRow({
             </form>
           </td>
         </tr>
+      )}
+      {apercuOuvert && (
+        <FacturePreviewModal
+          factureId={facture.id}
+          reference={facture.reference}
+          onFermer={() => setApercuOuvert(false)}
+        />
       )}
     </>
   );
