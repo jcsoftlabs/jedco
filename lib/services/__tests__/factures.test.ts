@@ -114,27 +114,46 @@ describe("module Factures (intégration réelle)", () => {
   });
 
   it("fige le taux USD au moment de l'émission — indépendant de sa valeur ultérieure", async () => {
-    await prisma.config.upsert({
-      where: { cle: "TAUX_USD_HTG" },
-      create: { cle: "TAUX_USD_HTG", valeur: "132.5" },
-      update: { valeur: "132.5" },
-    });
+    // Le taux de change est un paramètre MÉTIER saisi par l'admin, pas une
+    // donnée de test : ce test l'écrase temporairement et DOIT le restaurer.
+    // Sans cette restauration, il laissait « 150 » derrière lui — valeur qui
+    // s'est retrouvée figée sur une vraie facture client, la base de test
+    // étant partagée avec la production.
+    const valeurInitiale = await prisma.config.findUnique({ where: { cle: "TAUX_USD_HTG" } });
 
-    const facture = await creerFacture({
-      clientId,
-      lignes: [{ description: "x", quantite: 1, prixUnitaireHTG: 1325 }],
-      tauxTaxePourcent: 0,
-      dateEcheanceJours: 30,
-    });
-    idsFactures.push(facture.id);
+    try {
+      await prisma.config.upsert({
+        where: { cle: "TAUX_USD_HTG" },
+        create: { cle: "TAUX_USD_HTG", valeur: "132.5" },
+        update: { valeur: "132.5" },
+      });
 
-    expect(facture.tauxUsdApplique).not.toBeNull();
-    expect(decoderTaux(facture.tauxUsdApplique!)).toBeCloseTo(132.5, 4);
+      const facture = await creerFacture({
+        clientId,
+        lignes: [{ description: "x", quantite: 1, prixUnitaireHTG: 1325 }],
+        tauxTaxePourcent: 0,
+        dateEcheanceJours: 30,
+      });
+      idsFactures.push(facture.id);
 
-    // Le taux change après coup — la facture déjà émise ne doit pas bouger.
-    await prisma.config.update({ where: { cle: "TAUX_USD_HTG" }, data: { valeur: "150" } });
-    const relue = await obtenirFacture(facture.id);
-    expect(decoderTaux(relue!.tauxUsdApplique!)).toBeCloseTo(132.5, 4);
+      expect(facture.tauxUsdApplique).not.toBeNull();
+      expect(decoderTaux(facture.tauxUsdApplique!)).toBeCloseTo(132.5, 4);
+
+      // Le taux change après coup — la facture déjà émise ne doit pas bouger.
+      await prisma.config.update({ where: { cle: "TAUX_USD_HTG" }, data: { valeur: "151.75" } });
+      const relue = await obtenirFacture(facture.id);
+      expect(decoderTaux(relue!.tauxUsdApplique!)).toBeCloseTo(132.5, 4);
+    } finally {
+      // Restauration à l'identique, y compris l'absence de configuration.
+      if (valeurInitiale) {
+        await prisma.config.update({
+          where: { cle: "TAUX_USD_HTG" },
+          data: { valeur: valeurInitiale.valeur },
+        });
+      } else {
+        await prisma.config.deleteMany({ where: { cle: "TAUX_USD_HTG" } });
+      }
+    }
   });
 
   it("modifie une facture sans paiement, refuse si un paiement existe", async () => {

@@ -7,9 +7,11 @@ import {
   usagesTypeService,
   usagesTypeVehicule,
 } from "@/lib/services/types-reference";
+import { obtenirTauxUsd } from "@/lib/services/config";
+import TauxChangeForm from "./TauxChangeForm";
 import TypesPanel from "./TypesPanel";
 
-export default async function TypesPage() {
+export default async function ParametresPage() {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
   try {
@@ -19,7 +21,11 @@ export default async function TypesPage() {
     throw e;
   }
 
-  const [services, vehicules] = await Promise.all([listerTypesService(), listerTypesVehicule()]);
+  const [services, vehicules, taux] = await Promise.all([
+    listerTypesService(),
+    listerTypesVehicule(),
+    obtenirTauxUsd(),
+  ]);
 
   // Le nombre d'usages est calculé côté serveur pour que l'admin voie
   // immédiatement ce qu'un type « coûte » avant de le désactiver.
@@ -29,14 +35,19 @@ export default async function TypesPage() {
   ]);
 
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-jedco-dark">Types</h2>
+        <h2 className="text-2xl font-bold text-jedco-dark">Paramètres</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Prestations et types de véhicule proposés par JEDCO. Un type désactivé disparaît des
-          formulaires de saisie mais reste lisible sur l&apos;historique qui l&apos;utilise déjà.
+          Valeurs métier qui pilotent les formulaires de saisie et les documents envoyés aux clients.
         </p>
       </div>
+
+      <TauxChangeForm
+        valeurActuelle={taux.valeur}
+        misAJourLe={taux.misAJourLe ? taux.misAJourLe.toISOString() : null}
+        estAdmin={user.role === "ADMIN"}
+      />
 
       <TypesPanel
         titre="Types de prestation"
