@@ -35,6 +35,7 @@ export default function Header() {
               Assistant
             </a>
             <a href="#contact" className="hover:text-jedco transition">Contact</a>
+            <a href="/espace-client" className="hover:text-jedco transition">Espace Client</a>
           </nav>
           <a
             href="#contact"
@@ -71,6 +72,7 @@ export default function Header() {
               Assistant
             </a>
             <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-1 hover:bg-slate-100">Contact</a>
+            <a href="/espace-client" onClick={() => setMobileMenuOpen(false)} className="rounded-md px-2 py-1 hover:bg-slate-100">Espace Client</a>
           </div>
         </div>
       )}

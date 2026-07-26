@@ -198,11 +198,45 @@ model Client {
   factures      Facture[]
   devis         Devis[]
   toilettes     ToiletteMobile[]
+  codesConnexion CodeConnexionClient[]
+  sessions      SessionClient[]
   deletedAt     DateTime?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
   @@index([ville, actif])
+}
+
+// Portail client : connexion par code à 6 chiffres envoyé par e-mail, sans
+// mot de passe à gérer côté client. Distinct de Session (réservé au
+// personnel authentifié par mot de passe) — un client n'est pas un User.
+model CodeConnexionClient {
+  id         String    @id @default(cuid())
+  clientId   String
+  client     Client    @relation(fields: [clientId], references: [id])
+  // Seul le hash est stocké (même logique que Session.tokenHash) : une fuite
+  // de la base ne doit pas suffire à se connecter à la place du client.
+  codeHash   String
+  expiresAt  DateTime
+  tentatives Int       @default(0)
+  utiliseAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([clientId, createdAt])
+}
+
+model SessionClient {
+  id        String    @id @default(cuid())
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id])
+  tokenHash String    @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([clientId])
 }
 
 model Contrat {
