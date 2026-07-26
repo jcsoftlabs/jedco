@@ -108,6 +108,56 @@ describe("module Clients (intégration réelle)", () => {
     expect(data.some((c) => c.id === cree.id)).toBe(true);
   });
 
+  it("la recherche est insensible aux accents — saisir sans accent trouve un nom accentué", async () => {
+    const cree = await creerClient({
+      nom: "Pétionville Spécial Test",
+      type: "PARTICULIER",
+      telephone: "1234",
+      ville: "Port-au-Prince",
+    });
+    idsCrees.push(cree.id);
+
+    const { data } = await listerClients({ page: 1, limit: 20, search: "petionville special" });
+    expect(data.some((c) => c.id === cree.id)).toBe(true);
+  });
+
+  it("la recherche exige tous les mots (ET), pas juste l'un d'entre eux", async () => {
+    const cree = await creerClient({
+      nom: "Jean Baptiste Unique Test",
+      type: "PARTICULIER",
+      telephone: "1234",
+      ville: "Port-au-Prince",
+    });
+    idsCrees.push(cree.id);
+
+    const { data: avecLesDeuxMots } = await listerClients({ page: 1, limit: 20, search: "jean baptiste unique" });
+    expect(avecLesDeuxMots.some((c) => c.id === cree.id)).toBe(true);
+
+    const { data: avecMotAbsent } = await listerClients({
+      page: 1,
+      limit: 20,
+      search: "jean motquinexistepasdutout",
+    });
+    expect(avecMotAbsent.some((c) => c.id === cree.id)).toBe(false);
+  });
+
+  it("la recherche porte sur toute la table, pas seulement la page demandée", async () => {
+    // Corrige le bug initial : avant, un enregistrement au-delà du lot chargé
+    // par la page admin était introuvable par la recherche. Ici, limit: 1
+    // simule un client hors de la "première page" — il doit rester trouvable.
+    const cree = await creerClient({
+      nom: "AuDelaDeLaPageChargeeXYZ",
+      type: "PARTICULIER",
+      telephone: "1234",
+      ville: "Port-au-Prince",
+    });
+    idsCrees.push(cree.id);
+
+    const { data, meta } = await listerClients({ page: 1, limit: 1, search: "AuDelaDeLaPageChargeeXYZ" });
+    expect(meta.total).toBe(1);
+    expect(data[0]?.id).toBe(cree.id);
+  });
+
   it("statsClient calcule le montant dû à partir des factures impayées", async () => {
     const client = await creerClient({ nom: "Client Stats", type: "PARTICULIER", telephone: "1111", ville: "Port-au-Prince" });
     idsCrees.push(client.id);

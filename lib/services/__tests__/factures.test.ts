@@ -254,4 +254,28 @@ describe("module Factures (intégration réelle)", () => {
     expect(stats.totalFactureHTG).toBeGreaterThan(0n);
     expect(stats.revenusParVille["VilleFactureTest"]).toBeGreaterThan(0n);
   });
+
+  it("la recherche trouve une facture par le nom du client (jointure), insensible aux accents", async () => {
+    const client = await prisma.client.create({
+      data: { code: `TEST-FAC-RECH-${Date.now()}`, nom: "Frantzy Néré Unique", telephone: "0000" },
+    });
+    const facture = await creerFacture({
+      clientId: client.id,
+      lignes: [{ description: "x", quantite: 1, prixUnitaireHTG: 1000 }],
+      tauxTaxePourcent: 0,
+      dateEcheanceJours: 30,
+    });
+
+    try {
+      const { data } = await listerFactures({ page: 1, limit: 1, search: "frantzy nere" });
+      expect(data.some((f) => f.id === facture.id)).toBe(true);
+
+      const parReference = await listerFactures({ page: 1, limit: 100, search: facture.reference });
+      expect(parReference.data.some((f) => f.id === facture.id)).toBe(true);
+    } finally {
+      await prisma.ligneFacture.deleteMany({ where: { factureId: facture.id } });
+      await prisma.facture.delete({ where: { id: facture.id } });
+      await prisma.client.delete({ where: { id: client.id } });
+    }
+  });
 });

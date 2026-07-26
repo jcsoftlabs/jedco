@@ -52,6 +52,7 @@ export const listeInterventionsSchema = z.object({
   ville: z.string().optional(),
   technicienId: z.string().optional(),
   date: z.coerce.date().optional(),
+  search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

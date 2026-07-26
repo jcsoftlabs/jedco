@@ -38,6 +38,7 @@ export const listeFacturesSchema = z.object({
   statut: statutFactureSchema.optional(),
   dateDebut: z.coerce.date().optional(),
   dateFin: z.coerce.date().optional(),
+  search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

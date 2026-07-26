@@ -15,6 +15,7 @@ describe("module Devis (intégration réelle)", () => {
   let clientId: string;
   const idsDevis: string[] = [];
   const idsFactures: string[] = [];
+  const idsClientsExtra: string[] = [];
 
   beforeAll(async () => {
     const client = await prisma.client.create({
@@ -29,6 +30,7 @@ describe("module Devis (intégration réelle)", () => {
     await prisma.ligneDevis.deleteMany({ where: { devisId: { in: idsDevis } } });
     await prisma.devis.deleteMany({ where: { id: { in: idsDevis } } });
     await prisma.client.delete({ where: { id: clientId } });
+    await prisma.client.deleteMany({ where: { id: { in: idsClientsExtra } } });
     await prisma.$disconnect();
   });
 
@@ -167,5 +169,23 @@ describe("module Devis (intégration réelle)", () => {
     const { data, meta } = await listerDevis({ page: 1, limit: 100, clientId });
     expect(meta.total).toBeGreaterThan(0);
     expect(data.every((d) => d.clientId === clientId)).toBe(true);
+  });
+
+  it("la recherche trouve un devis par le nom du client (jointure), même sur une autre page", async () => {
+    const client = await prisma.client.create({
+      data: { code: `TEST-DEV-RECH-${Date.now()}`, nom: "Wilkinson Désir Unique", telephone: "0000" },
+    });
+    idsClientsExtra.push(client.id);
+    const devis = await creerDevis({
+      clientId: client.id,
+      lignes: [{ description: "x", quantite: 1, prixUnitaireHTG: 1000 }],
+      tauxTaxePourcent: 0,
+      dateValiditeJours: 30,
+    });
+    idsDevis.push(devis.id);
+
+    // Sans accent, alors que le nom réel en contient un.
+    const { data } = await listerDevis({ page: 1, limit: 1, search: "wilkinson desir" });
+    expect(data.some((d) => d.id === devis.id)).toBe(true);
   });
 });

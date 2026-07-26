@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerFactures, statsFactures } from "@/lib/services/factures";
+import { statutFactureSchema } from "@/lib/schemas/factures";
 import { listerClients } from "@/lib/services/clients";
 import { listerCatalogue } from "@/lib/services/catalogue";
 import { formatHTG } from "@/lib/money";
@@ -12,7 +13,7 @@ import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 export default async function FacturesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string; page?: string }>;
+  searchParams: Promise<{ clientId?: string; page?: string; q?: string; statut?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -23,11 +24,12 @@ export default async function FacturesPage({
     throw e;
   }
 
-  const { clientId, page: pageParam } = await searchParams;
+  const { clientId, page: pageParam, q, statut } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
+  const statutValide = statutFactureSchema.safeParse(statut).data;
 
   const [{ data: factures, meta }, { data: clients }, stats, catalogue] = await Promise.all([
-    listerFactures({ page, limit: TAILLE_PAGE_DEFAUT }),
+    listerFactures({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }),
     listerClients({ page: 1, limit: 200 }),
     statsFactures({}),
     listerCatalogue({ actif: true }),
@@ -78,7 +80,7 @@ export default async function FacturesPage({
           limit={meta.limit}
           total={meta.total}
           basePath="/admin/factures"
-          searchParams={{ clientId }}
+          searchParams={{ clientId, q, statut }}
         />
       </div>
     </div>

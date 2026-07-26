@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { referenceFacture } from "@/lib/codes";
 import { htgToCentimes, encoderTaux } from "@/lib/money";
 import { ErreurMetier } from "@/lib/errors";
+import { motifsRecherche } from "@/lib/services/recherche";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { StatutFacture } from "@/app/generated/prisma/enums";
 import type { CreerFactureInput, ListeFacturesParams, ModifierFactureInput } from "@/lib/schemas/factures";
@@ -13,12 +14,28 @@ const INCLUDE_STANDARD = {
 } satisfies Prisma.FactureInclude;
 
 export async function listerFactures(params: ListeFacturesParams) {
-  const { page, limit, clientId, statut, dateDebut, dateFin } = params;
+  const { page, limit, clientId, statut, dateDebut, dateFin, search } = params;
+
+  // Voir listerClients pour le détail de l'approche (jointure Client pour
+  // chercher aussi par nom, unaccent pour l'insensibilité aux accents).
+  let idsRecherche: string[] | undefined;
+  if (search?.trim()) {
+    const motifs = motifsRecherche(search);
+    const lignes = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT f.id FROM "Facture" f
+      JOIN "Client" c ON c.id = f."clientId"
+      WHERE f."deletedAt" IS NULL AND unaccent(lower(
+        coalesce(f.reference, '') || ' ' || coalesce(c.nom, '') || ' ' || coalesce(c.email, '')
+      )) LIKE ALL(${motifs}::text[])
+    `;
+    idsRecherche = lignes.map((l) => l.id);
+  }
 
   const where: Prisma.FactureWhereInput = {
     deletedAt: null,
     ...(clientId ? { clientId } : {}),
     ...(statut ? { statut } : {}),
+    ...(idsRecherche ? { id: { in: idsRecherche } } : {}),
     ...(dateDebut || dateFin
       ? {
           dateEmission: {

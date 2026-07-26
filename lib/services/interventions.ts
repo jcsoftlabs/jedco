@@ -6,6 +6,7 @@ import { debutJourLocal, finJourLocal } from "@/lib/dates";
 import { scopeInterventions } from "@/lib/auth/rbac";
 import { STATUTS_VEHICULE_INDISPONIBLE } from "@/lib/services/vehicules";
 import { verifierTypesService } from "@/lib/services/types-reference";
+import { motifsRecherche } from "@/lib/services/recherche";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { Role, StatutIntervention } from "@/app/generated/prisma/enums";
 import type {
@@ -24,7 +25,26 @@ const INCLUDE_STANDARD = {
 } satisfies Prisma.InterventionInclude;
 
 export async function listerInterventions(params: ListeInterventionsParams, user: UtilisateurScope) {
-  const { page, limit, statut, type, ville, technicienId, date } = params;
+  const { page, limit, statut, type, ville, technicienId, date, search } = params;
+
+  // Voir listerClients pour le détail de l'approche. Le filtre RBAC
+  // (scopeInterventions) reste appliqué normalement ci-dessous : cette
+  // recherche brute ne fait que réduire l'univers des id candidats par le
+  // texte, elle ne contourne jamais la portée d'accès de l'utilisateur.
+  let idsRecherche: string[] | undefined;
+  if (search?.trim()) {
+    const motifs = motifsRecherche(search);
+    const lignes = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT i.id FROM "Intervention" i
+      JOIN "Client" c ON c.id = i."clientId"
+      LEFT JOIN "Vehicule" v ON v.id = i."vehiculeId"
+      WHERE i."deletedAt" IS NULL AND unaccent(lower(
+        coalesce(i.reference, '') || ' ' || coalesce(c.nom, '') || ' ' || coalesce(i.ville, '') ||
+        ' ' || coalesce(i.type, '') || ' ' || coalesce(v.immatriculation, '')
+      )) LIKE ALL(${motifs}::text[])
+    `;
+    idsRecherche = lignes.map((l) => l.id);
+  }
 
   const where: Prisma.InterventionWhereInput = {
     deletedAt: null,
@@ -34,6 +54,7 @@ export async function listerInterventions(params: ListeInterventionsParams, user
     ...(ville ? { ville } : {}),
     ...(technicienId ? { techniciens: { some: { technicienId } } } : {}),
     ...(date ? { datePlanifiee: { gte: debutJourLocal(date), lte: finJourLocal(date) } } : {}),
+    ...(idsRecherche ? { id: { in: idsRecherche } } : {}),
   };
 
   const [data, total] = await Promise.all([

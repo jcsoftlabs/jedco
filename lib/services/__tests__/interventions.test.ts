@@ -268,6 +268,29 @@ describe("module Interventions (intégration réelle)", () => {
     expect(meta.total).toBe(1);
   });
 
+  it("la recherche trouve une intervention par le nom du client (jointure), insensible aux accents", async () => {
+    const client = await prisma.client.create({
+      data: { code: `TEST-INT-RECH-${Date.now()}`, nom: "Ézéchiel Joseph Unique", telephone: "0000" },
+    });
+    const intervention = await creerIntervention({
+      clientId: client.id,
+      type: "VIDANGE",
+      adresse: "x",
+      ville: "x",
+      priorite: "NORMALE",
+      dureeEstimeeMin: 60,
+      technicienIds: [],
+    });
+
+    try {
+      const { data } = await listerInterventions({ page: 1, limit: 1, search: "ezechiel joseph" }, admin);
+      expect(data.some((i) => i.id === intervention.id)).toBe(true);
+    } finally {
+      await prisma.intervention.delete({ where: { id: intervention.id } });
+      await prisma.client.delete({ where: { id: client.id } });
+    }
+  });
+
   it("planningDuJour groupe les interventions par technicien", async () => {
     const date = new Date("2027-03-01T12:00:00Z");
     const intervention = await creerIntervention({

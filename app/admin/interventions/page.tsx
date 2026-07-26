@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { listerInterventions } from "@/lib/services/interventions";
+import { statutInterventionSchema } from "@/lib/schemas/interventions";
 import { listerClients } from "@/lib/services/clients";
 import { listerTechniciens } from "@/lib/services/techniciens";
 import { listerTypesService } from "@/lib/services/types-reference";
@@ -13,16 +14,17 @@ import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 export default async function InterventionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; statut?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
 
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, q, statut } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
+  const statutValide = statutInterventionSchema.safeParse(statut).data;
 
   const [{ data: interventions, meta }, { data: clients }, vehicules, techniciens, typesService] = await Promise.all([
-    listerInterventions({ page, limit: TAILLE_PAGE_DEFAUT }, user),
+    listerInterventions({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }, user),
     listerClients({ page: 1, limit: 200 }),
     prisma.vehicule.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" } }),
     listerTechniciens(),
@@ -68,7 +70,13 @@ export default async function InterventionsPage({
         }))}
       />
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <Pager page={meta.page} limit={meta.limit} total={meta.total} basePath="/admin/interventions" />
+        <Pager
+          page={meta.page}
+          limit={meta.limit}
+          total={meta.total}
+          basePath="/admin/interventions"
+          searchParams={{ q, statut }}
+        />
       </div>
     </div>
   );

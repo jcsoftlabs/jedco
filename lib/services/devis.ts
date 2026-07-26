@@ -3,6 +3,7 @@ import { referenceDevis, referenceFacture } from "@/lib/codes";
 import { htgToCentimes } from "@/lib/money";
 import { ErreurMetier } from "@/lib/errors";
 import { tauxUsdCourantEncode } from "@/lib/services/factures";
+import { motifsRecherche } from "@/lib/services/recherche";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { CreerDevisInput, ListeDevisParams, ModifierDevisInput } from "@/lib/schemas/devis";
 
@@ -12,12 +13,27 @@ const INCLUDE_STANDARD = {
 } satisfies Prisma.DevisInclude;
 
 export async function listerDevis(params: ListeDevisParams) {
-  const { page, limit, clientId, statut } = params;
+  const { page, limit, clientId, statut, search } = params;
+
+  // Voir listerClients pour le détail de l'approche.
+  let idsRecherche: string[] | undefined;
+  if (search?.trim()) {
+    const motifs = motifsRecherche(search);
+    const lignes = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT d.id FROM "Devis" d
+      JOIN "Client" c ON c.id = d."clientId"
+      WHERE d."deletedAt" IS NULL AND unaccent(lower(
+        coalesce(d.reference, '') || ' ' || coalesce(c.nom, '') || ' ' || coalesce(c.email, '')
+      )) LIKE ALL(${motifs}::text[])
+    `;
+    idsRecherche = lignes.map((l) => l.id);
+  }
 
   const where: Prisma.DevisWhereInput = {
     deletedAt: null,
     ...(clientId ? { clientId } : {}),
     ...(statut ? { statut } : {}),
+    ...(idsRecherche ? { id: { in: idsRecherche } } : {}),
   };
 
   const [data, total] = await Promise.all([
