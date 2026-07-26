@@ -34,6 +34,7 @@ const I = {
   parametres: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z",
   flotte: "M3 12h13l3 4h2v3h-2M3 12V7a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v5M3 12v7h2M7.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
   support: "M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 0 1-3.67-.68L3 21l1.87-4.05A7.64 7.64 0 0 1 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z",
+  manuel: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z",
 };
 
 const LIENS_ADMIN: Lien[] = [
@@ -52,6 +53,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },
   { href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> },
   { href: "/admin/parametres", label: "Paramètres", icone: <Icone d={I.parametres} /> },
+  { href: "/admin/manuel", label: "Manuel", icone: <Icone d={I.manuel} /> },
 ];
 
 // Un TECHNICIEN n'a accès qu'aux deux pages sans requireRole ADMIN/SUPERVISEUR
@@ -59,11 +61,15 @@ const LIENS_ADMIN: Lien[] = [
 const LIENS_TECHNICIEN: Lien[] = [
   { href: "/admin/terrain", label: "Terrain", icone: <Icone d={I.terrain} /> },
   { href: "/admin/interventions", label: "Interventions", icone: <Icone d={I.interventions} /> },
+  { href: "/admin/manuel", label: "Manuel", icone: <Icone d={I.manuel} /> },
 ];
 
 // Un SUPPORT (réceptionniste) n'a accès qu'au tableau de bord des
 // conversations — jamais aux modules métier (factures, clients, etc.).
-const LIENS_SUPPORT: Lien[] = [{ href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> }];
+const LIENS_SUPPORT: Lien[] = [
+  { href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> },
+  { href: "/admin/manuel", label: "Manuel", icone: <Icone d={I.manuel} /> },
+];
 
 function Spinner({ className = "" }: { className?: string }) {
   return (
