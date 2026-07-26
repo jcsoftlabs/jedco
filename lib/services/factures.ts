@@ -204,10 +204,18 @@ export async function statsFactures(params: { dateDebut?: Date; dateFin?: Date }
       const cle = ligne.service ?? "AUTRE";
       revenusParService.set(cle, (revenusParService.get(cle) ?? 0n) + ligne.totalHTG);
     }
-    revenusParVille.set(
-      facture.client.ville,
-      (revenusParVille.get(facture.client.ville) ?? 0n) + facture.totalHTG
-    );
+    // facture.client ne peut manquer que sous une vraie course (client
+    // supprimé physiquement entre la lecture et l'itération — n'arrive pas
+    // en usage normal, le client est toujours soft-deleted, mais a été
+    // observé sous suppression concurrente en environnement de test) : on
+    // garde le facture.totalHTG dans le total global déjà comptabilisé
+    // au-dessus, seule la ventilation par ville de CETTE facture est omise.
+    if (facture.client) {
+      revenusParVille.set(
+        facture.client.ville,
+        (revenusParVille.get(facture.client.ville) ?? 0n) + facture.totalHTG
+      );
+    }
   }
 
   return {
