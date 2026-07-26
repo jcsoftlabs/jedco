@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
-import AdminHeader from "./AdminHeader";
 import { statsPilotage } from "@/lib/services/pilotage";
-import { formatHTG } from "@/lib/money";
+import { formatHTG, centimesToHTG } from "@/lib/money";
+import RevenusChart from "./charts/RevenusChart";
+import RevenusParServiceChart from "./charts/RevenusParServiceChart";
 
 const LIBELLE_STATUT_INTERVENTION: Record<string, string> = {
   EN_ATTENTE: "En attente",
@@ -21,6 +22,26 @@ const COULEUR_STATUT_INTERVENTION: Record<string, string> = {
   ANNULE: "bg-red-400",
 };
 
+function Carte({
+  titre,
+  valeur,
+  accent,
+  indice,
+}: {
+  titre: string;
+  valeur: string;
+  accent?: string;
+  indice?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{titre}</p>
+      <p className={`mt-2 text-2xl font-bold tabular-nums ${accent ?? "text-jedco-dark"}`}>{valeur}</p>
+      {indice && <p className="mt-1 text-xs text-slate-400">{indice}</p>}
+    </div>
+  );
+}
+
 function RepartitionBarre({
   parStatut,
   libelles,
@@ -35,18 +56,22 @@ function RepartitionBarre({
 
   return (
     <div>
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+      {/* Écart de 2px entre segments : deux tranches adjacentes de teintes
+          proches restent distinctes même sans contraste fort. */}
+      <div className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-slate-100">
         {Object.entries(parStatut)
           .filter(([, n]) => n > 0)
           .map(([statut, n]) => (
             <div
               key={statut}
-              className={couleurs[statut] ?? "bg-slate-300"}
+              className={`${couleurs[statut] ?? "bg-slate-300"} first:rounded-l-full last:rounded-r-full`}
               style={{ width: `${(n / total) * 100}%` }}
               title={`${libelles[statut] ?? statut} : ${n}`}
             />
           ))}
       </div>
+      {/* Légende toujours présente : l'identité ne repose jamais sur la seule
+          couleur. */}
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
         {Object.entries(parStatut)
           .filter(([, n]) => n > 0)
@@ -64,103 +89,102 @@ function RepartitionBarre({
 export default async function AdminHomePage() {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
-  // Un TECHNICIEN n'a accès qu'à Interventions et Terrain (voir
-  // AdminHeader.tsx) — ce tableau de bord, plein de liens et de chiffres
-  // réservés à ADMIN/SUPERVISEUR, ne lui sert à rien. Terrain est l'écran
-  // conçu pour son usage quotidien.
+  // Un TECHNICIEN n'a accès qu'à Interventions et Terrain (voir AdminShell) —
+  // ce tableau de bord, plein de chiffres réservés à ADMIN/SUPERVISEUR, ne lui
+  // sert à rien. Terrain est l'écran conçu pour son usage quotidien.
   if (user.role === "TECHNICIEN") redirect("/admin/terrain");
 
   const stats = await statsPilotage();
 
+  const pointsGraphe = stats.serieMensuelle.map((p) => ({
+    libelle: p.libelle,
+    facture: centimesToHTG(p.factureHTG),
+    encaisse: centimesToHTG(p.encaisseHTG),
+  }));
+
+  const partsService = Object.entries(stats.finance.revenusParService).map(([service, montant]) => ({
+    service,
+    montantHTG: centimesToHTG(montant as bigint),
+  }));
+
+  const alertes = [
+    stats.alertes.facturesEnRetard > 0 && {
+      href: "/admin/factures",
+      texte: `${stats.alertes.facturesEnRetard} facture(s) en retard`,
+      classe: "border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
+    },
+    stats.alertes.demandesNonTraitees > 0 && {
+      href: "/admin/demandes",
+      texte: `${stats.alertes.demandesNonTraitees} demande(s) non traitée(s)`,
+      classe: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+    },
+    stats.alertes.vehiculesEnMaintenance > 0 && {
+      href: "/admin/interventions",
+      texte: `${stats.alertes.vehiculesEnMaintenance} véhicule(s) en maintenance`,
+      classe: "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200",
+    },
+  ].filter(Boolean) as { href: string; texte: string; classe: string }[];
+
+  const tauxEncaissement =
+    stats.finance.totalFactureHTG > 0n
+      ? Math.round(Number((stats.finance.totalPayeHTG * 100n) / stats.finance.totalFactureHTG))
+      : null;
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-6 py-10 max-w-6xl mx-auto">
-        <p className="text-slate-700">
-          Connecté en tant que{" "}
-          <span className="font-semibold">
-            {user.prenom} {user.nom}
-          </span>{" "}
-          ({user.role}).
-        </p>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-jedco-dark">
+          Bonjour {user.prenom} 👋
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">Voici l&apos;activité de JEDCO en un coup d&apos;œil.</p>
+      </div>
 
-        {(stats.alertes.facturesEnRetard > 0 ||
-          stats.alertes.demandesNonTraitees > 0 ||
-          stats.alertes.vehiculesEnMaintenance > 0) && (
-          <div className="mt-4 flex flex-wrap gap-3">
-            {stats.alertes.facturesEnRetard > 0 && (
-              <Link
-                href="/admin/factures"
-                className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 hover:bg-red-100"
-              >
-                ⚠ {stats.alertes.facturesEnRetard} facture(s) en retard
-              </Link>
-            )}
-            {stats.alertes.demandesNonTraitees > 0 && (
-              <Link
-                href="/admin/demandes"
-                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 hover:bg-amber-100"
-              >
-                ⚠ {stats.alertes.demandesNonTraitees} demande(s) non traitée(s)
-              </Link>
-            )}
-            {stats.alertes.vehiculesEnMaintenance > 0 && (
-              <Link
-                href="/admin/interventions"
-                className="rounded-lg border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-600 hover:bg-slate-200"
-              >
-                🔧 {stats.alertes.vehiculesEnMaintenance} véhicule(s) en maintenance
-              </Link>
-            )}
-          </div>
-        )}
-
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Total facturé</p>
-            <p className="text-lg font-bold text-jedco-dark">{formatHTG(stats.finance.totalFactureHTG)}</p>
-          </div>
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Total encaissé</p>
-            <p className="text-lg font-bold text-emerald-600">{formatHTG(stats.finance.totalPayeHTG)}</p>
-          </div>
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Impayé</p>
-            <p className="text-lg font-bold text-red-600">{formatHTG(stats.finance.totalImpayeHTG)}</p>
-          </div>
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Taux de conversion devis → facture</p>
-            <p className="text-lg font-bold text-jedco-dark">
-              {stats.commercial.tauxConversionPourcent !== null ? `${stats.commercial.tauxConversionPourcent}%` : "—"}
-            </p>
-          </div>
+      {alertes.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {alertes.map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${a.classe}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-4 w-4">
+                <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+              </svg>
+              {a.texte}
+            </Link>
+          ))}
         </div>
+      )}
 
-        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Interventions actives</p>
-            <p className="text-lg font-bold text-jedco-dark">{stats.interventions.actives}</p>
-          </div>
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Techniciens disponibles</p>
-            <p className="text-lg font-bold text-jedco-dark">
-              {stats.techniciens.disponibles} / {stats.techniciens.total}
-            </p>
-          </div>
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Véhicules disponibles</p>
-            <p className="text-lg font-bold text-jedco-dark">
-              {stats.vehicules.disponibles} / {stats.vehicules.total}
-            </p>
-          </div>
-          <div className="rounded-lg bg-white border border-slate-200 p-4">
-            <p className="text-xs text-slate-500">Demandes non traitées</p>
-            <p className="text-lg font-bold text-jedco-dark">{stats.commercial.demandesNonTraitees}</p>
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Carte titre="Total facturé" valeur={formatHTG(stats.finance.totalFactureHTG)} />
+        <Carte
+          titre="Total encaissé"
+          valeur={formatHTG(stats.finance.totalPayeHTG)}
+          accent="text-emerald-600"
+          indice={tauxEncaissement !== null ? `${tauxEncaissement}% du facturé` : undefined}
+        />
+        <Carte titre="Impayé" valeur={formatHTG(stats.finance.totalImpayeHTG)} accent="text-red-600" />
+        <Carte
+          titre="Conversion devis"
+          valeur={stats.commercial.tauxConversionPourcent !== null ? `${stats.commercial.tauxConversionPourcent}%` : "—"}
+          indice="devis émis → facturés"
+        />
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-jedco-dark">Facturé et encaissé — 12 derniers mois</h3>
+        <p className="mb-4 text-xs text-slate-400">Survolez la courbe pour le détail d&apos;un mois.</p>
+        <RevenusChart points={pointsGraphe} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-semibold text-jedco-dark">Revenus par service</h3>
+          <RevenusParServiceChart parts={partsService} />
         </div>
-
-        <div className="mt-6 grid md:grid-cols-2 gap-4">
-          <div className="rounded-lg bg-white border border-slate-200 p-5">
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="mb-3 text-sm font-semibold text-jedco-dark">Interventions par statut</h3>
             <RepartitionBarre
               parStatut={stats.interventions.parStatut}
@@ -168,7 +192,7 @@ export default async function AdminHomePage() {
               couleurs={COULEUR_STATUT_INTERVENTION}
             />
           </div>
-          <div className="rounded-lg bg-white border border-slate-200 p-5">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="mb-3 text-sm font-semibold text-jedco-dark">Devis par statut</h3>
             <RepartitionBarre
               parStatut={stats.commercial.devisParStatut}
@@ -191,26 +215,22 @@ export default async function AdminHomePage() {
             />
           </div>
         </div>
+      </div>
 
-        <div className="mt-8 flex flex-wrap gap-4">
-          <Link href="/admin/clients" className="rounded-lg bg-white border border-slate-200 px-5 py-4 hover:shadow-md transition">
-            <span className="block font-semibold text-jedco-dark">Clients</span>
-            <span className="text-sm text-slate-500">Gérer les clients</span>
-          </Link>
-          <Link href="/admin/contrats" className="rounded-lg bg-white border border-slate-200 px-5 py-4 hover:shadow-md transition">
-            <span className="block font-semibold text-jedco-dark">Contrats</span>
-            <span className="text-sm text-slate-500">Gérer les contrats</span>
-          </Link>
-          <Link href="/admin/interventions" className="rounded-lg bg-white border border-slate-200 px-5 py-4 hover:shadow-md transition">
-            <span className="block font-semibold text-jedco-dark">Interventions</span>
-            <span className="text-sm text-slate-500">Planifier et suivre</span>
-          </Link>
-          <Link href="/admin/factures" className="rounded-lg bg-white border border-slate-200 px-5 py-4 hover:shadow-md transition">
-            <span className="block font-semibold text-jedco-dark">Facturation</span>
-            <span className="text-sm text-slate-500">Factures et paiements</span>
-          </Link>
-        </div>
-      </main>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Carte titre="Interventions actives" valeur={String(stats.interventions.actives)} />
+        <Carte
+          titre="Techniciens"
+          valeur={`${stats.techniciens.disponibles} / ${stats.techniciens.total}`}
+          indice="disponibles"
+        />
+        <Carte
+          titre="Véhicules"
+          valeur={`${stats.vehicules.disponibles} / ${stats.vehicules.total}`}
+          indice="disponibles"
+        />
+        <Carte titre="Demandes en attente" valeur={String(stats.commercial.demandesNonTraitees)} />
+      </div>
     </div>
   );
 }

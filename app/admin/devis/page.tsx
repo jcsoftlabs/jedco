@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import AdminHeader from "../AdminHeader";
 import { listerDevis } from "@/lib/services/devis";
 import { listerClients } from "@/lib/services/clients";
 import { listerCatalogue } from "@/lib/services/catalogue";
 import NouveauDevisForm from "./NouveauDevisForm";
-import DevisRow from "./DevisRow";
+import DevisTable from "./DevisTable";
 
 export default async function DevisPage({
   searchParams,
@@ -25,63 +24,36 @@ export default async function DevisPage({
   const { clientId, description, ouvrir } = await searchParams;
 
   const [{ data: devis }, { data: clients }, catalogue] = await Promise.all([
-    listerDevis({ page: 1, limit: 50 }),
+    listerDevis({ page: 1, limit: 200 }),
     listerClients({ page: 1, limit: 200 }),
     listerCatalogue({ actif: true }),
   ]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-6 py-10 max-w-5xl mx-auto">
-        <h2 className="text-xl font-bold text-jedco-dark mb-6">Devis</h2>
+    <div className="max-w-6xl space-y-6">
+      <h2 className="text-2xl font-bold text-jedco-dark">Devis</h2>
 
-        <NouveauDevisForm
-          clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
-          clientIdParDefaut={clientId}
-          descriptionParDefaut={description}
-          ouvrirParDefaut={ouvrir === "1"}
-          catalogue={catalogue.map((a) => ({
-            nom: a.nom,
-            prixSuggereHTG: a.prixSuggereHTG?.toString() ?? null,
-          }))}
-        />
+      <NouveauDevisForm
+        clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
+        clientIdParDefaut={clientId}
+        descriptionParDefaut={description}
+        ouvrirParDefaut={ouvrir === "1"}
+        catalogue={catalogue.map((a) => ({
+          nom: a.nom,
+          prixSuggereHTG: a.prixSuggereHTG?.toString() ?? null,
+        }))}
+      />
 
-        <table className="mt-8 w-full text-sm bg-white rounded-lg border border-slate-200 overflow-hidden">
-          <thead>
-            <tr className="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
-              <th className="py-2 px-4">Référence</th>
-              <th className="px-4">Client</th>
-              <th className="px-4">Total</th>
-              <th className="px-4">Statut</th>
-              <th className="px-4">Valable jusqu&apos;au</th>
-              <th className="px-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {devis.map((d) => (
-              <DevisRow
-                key={d.id}
-                devis={{
-                  id: d.id,
-                  reference: d.reference,
-                  statut: d.statut,
-                  totalHTG: d.totalHTG.toString(),
-                  dateValidite: d.dateValidite.toISOString(),
-                  client: { nom: d.client.nom, email: d.client.email },
-                }}
-              />
-            ))}
-            {devis.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-6 px-4 text-center text-slate-400">
-                  Aucun devis pour l&apos;instant.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </main>
+      <DevisTable
+        devis={devis.map((d) => ({
+          id: d.id,
+          reference: d.reference,
+          statut: d.statut,
+          totalHTG: d.totalHTG.toString(),
+          dateValidite: d.dateValidite.toISOString(),
+          client: { nom: d.client.nom, email: d.client.email },
+        }))}
+      />
     </div>
   );
 }

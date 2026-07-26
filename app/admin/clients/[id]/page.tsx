@@ -2,7 +2,6 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import AdminHeader from "../../AdminHeader";
 import { obtenirClient, statsClient } from "@/lib/services/clients";
 import { prisma } from "@/lib/db";
 import { formatHTG } from "@/lib/money";
@@ -29,9 +28,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   ]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-6 py-10 max-w-4xl mx-auto">
+    <div className="max-w-4xl">
         <Link href="/admin/clients" className="text-sm text-jedco hover:underline">
           ← Clients
         </Link>
@@ -93,7 +90,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             {interventions.length === 0 && <li className="text-sm text-slate-400">Aucune intervention.</li>}
           </ul>
         </div>
-      </main>
     </div>
   );
 }

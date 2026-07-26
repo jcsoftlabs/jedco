@@ -1,0 +1,213 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import LogoutButton from "./LogoutButton";
+
+type Lien = { href: string; label: string; icone: React.ReactNode };
+
+const CLE_REPLI = "jedco.sidebar.replie";
+
+function Icone({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0">
+      <path d={d} />
+    </svg>
+  );
+}
+
+const I = {
+  accueil: "M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5",
+  demandes: "M4 5h16M4 12h16M4 19h10",
+  galerie: "M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6",
+  temoignages: "M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 1 1 18-4Z",
+  clients: "M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM21 19v-1a4 4 0 0 0-3-3.9",
+  contrats: "M8 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2M8 3a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2M9 12h6M9 16h4",
+  interventions: "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
+  terrain: "M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11ZM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+  techniciens: "M14.7 6.3a4 4 0 0 1 5.3 5.3l-2.6-2.6M14.7 6.3 4 17v3h3L17.4 9.6",
+  factures: "M14 3v5h5M8 13h8M8 17h5M6 3h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z",
+  devis: "M9 12h6m-6 4h4M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 5h6",
+  catalogue: "M4 6h16M4 12h16M4 18h16M2.5 6h.01M2.5 12h.01M2.5 18h.01",
+};
+
+const LIENS_ADMIN: Lien[] = [
+  { href: "/admin", label: "Tableau de bord", icone: <Icone d={I.accueil} /> },
+  { href: "/admin/demandes", label: "Demandes", icone: <Icone d={I.demandes} /> },
+  { href: "/admin/clients", label: "Clients", icone: <Icone d={I.clients} /> },
+  { href: "/admin/contrats", label: "Contrats", icone: <Icone d={I.contrats} /> },
+  { href: "/admin/interventions", label: "Interventions", icone: <Icone d={I.interventions} /> },
+  { href: "/admin/terrain", label: "Terrain", icone: <Icone d={I.terrain} /> },
+  { href: "/admin/techniciens", label: "Techniciens", icone: <Icone d={I.techniciens} /> },
+  { href: "/admin/factures", label: "Facturation", icone: <Icone d={I.factures} /> },
+  { href: "/admin/devis", label: "Devis", icone: <Icone d={I.devis} /> },
+  { href: "/admin/catalogue", label: "Catalogue", icone: <Icone d={I.catalogue} /> },
+  { href: "/admin/galerie", label: "Galerie", icone: <Icone d={I.galerie} /> },
+  { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },
+];
+
+// Un TECHNICIEN n'a accès qu'aux deux pages sans requireRole ADMIN/SUPERVISEUR
+// — lui montrer les autres serait un cul-de-sac plutôt qu'une fonctionnalité.
+const LIENS_TECHNICIEN: Lien[] = [
+  { href: "/admin/terrain", label: "Terrain", icone: <Icone d={I.terrain} /> },
+  { href: "/admin/interventions", label: "Interventions", icone: <Icone d={I.interventions} /> },
+];
+
+export default function AdminShell({
+  user,
+  children,
+}: {
+  user: { nom: string; prenom: string; role: string };
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const [replie, setReplie] = useState(false);
+  const [mobileOuvert, setMobileOuvert] = useState(false);
+
+  // L'état de repli est restauré après le montage plutôt que pendant le rendu
+  // initial : lire localStorage au premier rendu produirait un HTML serveur
+  // (toujours déplié) différent du HTML client, donc une erreur d'hydratation.
+  useEffect(() => {
+    setReplie(localStorage.getItem(CLE_REPLI) === "1");
+  }, []);
+
+  function basculerRepli() {
+    setReplie((v) => {
+      localStorage.setItem(CLE_REPLI, v ? "0" : "1");
+      return !v;
+    });
+  }
+
+  // Referme le tiroir mobile à chaque navigation — sans ça il resterait
+  // ouvert par-dessus la page qu'on vient d'atteindre.
+  useEffect(() => {
+    setMobileOuvert(false);
+  }, [pathname]);
+
+  const liens = user.role === "TECHNICIEN" ? LIENS_TECHNICIEN : LIENS_ADMIN;
+  const initiales = `${user.prenom.charAt(0)}${user.nom.charAt(0)}`.toUpperCase();
+
+  function estActif(href: string) {
+    // "/admin" ne doit s'allumer que sur lui-même, sinon il resterait actif
+    // sur toutes les sous-pages qui commencent par le même préfixe.
+    return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+  }
+
+  // `compact` est un paramètre plutôt que l'état `replie` lu directement : le
+  // tiroir mobile fait toujours 256px de large, il doit donc afficher les
+  // libellés même quand la barre latérale de bureau est repliée. Les lire
+  // depuis `replie` faisait fuiter l'état bureau dans le tiroir mobile, qui
+  // n'affichait alors que des icônes sans texte.
+  const navigation = (compact: boolean) => (
+    <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+      {liens.map((lien) => {
+        const actif = estActif(lien.href);
+        return (
+          <Link
+            key={lien.href}
+            href={lien.href}
+            title={compact ? lien.label : undefined}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+              actif
+                ? "bg-jedco text-white font-medium shadow-sm"
+                : "text-slate-300 hover:bg-white/10 hover:text-white"
+            } ${compact ? "justify-center px-2" : ""}`}
+          >
+            {lien.icone}
+            {!compact && <span className="truncate">{lien.label}</span>}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  const pied = (compact: boolean) => (
+    <div className="border-t border-white/10 p-3">
+      <div className={`flex items-center gap-3 ${compact ? "justify-center" : ""}`}>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-jedco text-xs font-bold text-white">
+          {initiales}
+        </span>
+        {!compact && (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-white">
+              {user.prenom} {user.nom}
+            </p>
+            <p className="text-xs text-slate-400">{user.role}</p>
+          </div>
+        )}
+      </div>
+      <div className={`mt-3 ${compact ? "flex justify-center" : ""}`}>
+        <LogoutButton />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* ─── Barre latérale, écrans larges ─── */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 hidden flex-col bg-jedco-dark transition-[width] duration-200 lg:flex ${
+          replie ? "w-[72px]" : "w-64"
+        }`}
+      >
+        <div className={`flex items-center gap-2 px-4 py-5 ${replie ? "justify-center px-2" : ""}`}>
+          {!replie && <span className="text-sm font-bold tracking-tight text-white">JEDCO</span>}
+          <button
+            onClick={basculerRepli}
+            aria-label={replie ? "Déplier le menu" : "Replier le menu"}
+            className={`rounded-lg p-1.5 text-slate-300 hover:bg-white/10 hover:text-white ${replie ? "" : "ml-auto"}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-5 w-5">
+              <path d={replie ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} />
+            </svg>
+          </button>
+        </div>
+        {navigation(replie)}
+        {pied(replie)}
+      </aside>
+
+      {/* ─── Tiroir mobile ─── */}
+      {mobileOuvert && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileOuvert(false)} />
+          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-jedco-dark">
+            <div className="flex items-center justify-between px-4 py-5">
+              <span className="text-sm font-bold tracking-tight text-white">JEDCO</span>
+              <button
+                onClick={() => setMobileOuvert(false)}
+                aria-label="Fermer le menu"
+                className="rounded-lg p-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-5 w-5">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+            {navigation(false)}
+            {pied(false)}
+          </aside>
+        </div>
+      )}
+
+      {/* ─── Contenu ─── */}
+      <div className={`transition-[padding] duration-200 ${replie ? "lg:pl-[72px]" : "lg:pl-64"}`}>
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:px-8">
+          <button
+            onClick={() => setMobileOuvert(true)}
+            aria-label="Ouvrir le menu"
+            className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 lg:hidden"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-6 w-6">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <h1 className="text-base font-semibold text-jedco-dark">
+            {liens.find((l) => estActif(l.href))?.label ?? "Backoffice"}
+          </h1>
+        </header>
+        <main className="px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+      </div>
+    </div>
+  );
+}

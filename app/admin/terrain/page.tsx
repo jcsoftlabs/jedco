@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
-import AdminHeader from "../AdminHeader";
 import { listerInterventions } from "@/lib/services/interventions";
 import { STATUTS_ACTIFS } from "@/lib/interventions/statut";
 import InterventionTerrainCard from "./InterventionTerrainCard";
@@ -41,9 +40,7 @@ export default async function TerrainPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-4 py-6 max-w-2xl mx-auto">
+    <div className="max-w-2xl">
         <h2 className="text-xl font-bold text-jedco-dark mb-1">Terrain</h2>
         <p className="text-sm text-slate-500 mb-6">Mes interventions en cours et à venir.</p>
 
@@ -68,7 +65,6 @@ export default async function TerrainPage() {
             </div>
           </div>
         )}
-      </main>
     </div>
   );
 }

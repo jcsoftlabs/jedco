@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import AdminHeader from "../AdminHeader";
 import { listerContrats } from "@/lib/services/contrats";
 import { listerClients } from "@/lib/services/clients";
 import { formatHTG } from "@/lib/money";
@@ -30,9 +29,7 @@ export default async function ContratsPage({
   ]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-6 py-10 max-w-4xl mx-auto">
+    <div className="max-w-4xl">
         <h2 className="text-xl font-bold text-jedco-dark mb-6">Contrats</h2>
         <NouveauContratForm
           clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
@@ -73,7 +70,6 @@ export default async function ContratsPage({
             )}
           </tbody>
         </table>
-      </main>
     </div>
   );
 }

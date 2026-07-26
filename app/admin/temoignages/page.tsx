@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import AdminHeader from "../AdminHeader";
 import { listerTemoignages } from "@/lib/services/temoignages";
 import NouveauTemoignageForm from "./NouveauTemoignageForm";
 import TemoignageRow from "./TemoignageRow";
@@ -19,9 +18,7 @@ export default async function TemoignagesPage() {
   const temoignages = await listerTemoignages();
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-6 py-10 max-w-3xl mx-auto">
+    <div className="max-w-3xl">
         <h2 className="text-xl font-bold text-jedco-dark mb-2">Témoignages</h2>
         <p className="text-sm text-slate-500 mb-6">
           Seuls les témoignages actifs s&apos;affichent sur le site public, triés par ordre puis date.
@@ -50,7 +47,6 @@ export default async function TemoignagesPage() {
             </p>
           )}
         </div>
-      </main>
     </div>
   );
 }

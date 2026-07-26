@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import AdminHeader from "../AdminHeader";
 import { listerMediaGalerieAdmin } from "@/lib/services/galerie";
 import NouvellePhotoForm from "./NouvellePhotoForm";
 import PhotoCard from "./PhotoCard";
@@ -19,9 +18,7 @@ export default async function GaleriePage() {
   const media = await listerMediaGalerieAdmin();
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-6 py-10 max-w-4xl mx-auto">
+    <div className="max-w-4xl">
         <h2 className="text-xl font-bold text-jedco-dark mb-2">Galerie publique</h2>
         <p className="text-sm text-slate-500 mb-6">
           Seules les photos publiées apparaissent sur le site public — les photos de rapport
@@ -48,7 +45,6 @@ export default async function GaleriePage() {
             </p>
           )}
         </div>
-      </main>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import AdminHeader from "../AdminHeader";
 import { listerDemandesDevis } from "@/lib/services/demandes-devis";
 import DemandeRow from "./DemandeRow";
 
@@ -19,9 +18,7 @@ export default async function DemandesPage() {
   const nonTraitees = demandes.filter((d) => !d.traite).length;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AdminHeader user={user} />
-      <main className="px-6 py-10 max-w-4xl mx-auto">
+    <div className="max-w-4xl">
         <h2 className="text-xl font-bold text-jedco-dark mb-1">Demandes de devis</h2>
         <p className="text-sm text-slate-500 mb-6">
           Soumises depuis le formulaire de contact du site public.{" "}
@@ -51,7 +48,6 @@ export default async function DemandesPage() {
             </p>
           )}
         </div>
-      </main>
     </div>
   );
 }
