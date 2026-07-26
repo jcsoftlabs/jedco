@@ -4,6 +4,7 @@ import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import AdminHeader from "../AdminHeader";
 import { listerDevis } from "@/lib/services/devis";
 import { listerClients } from "@/lib/services/clients";
+import { listerCatalogue } from "@/lib/services/catalogue";
 import NouveauDevisForm from "./NouveauDevisForm";
 import DevisRow from "./DevisRow";
 
@@ -23,9 +24,10 @@ export default async function DevisPage({
 
   const { clientId } = await searchParams;
 
-  const [{ data: devis }, { data: clients }] = await Promise.all([
+  const [{ data: devis }, { data: clients }, catalogue] = await Promise.all([
     listerDevis({ page: 1, limit: 50 }),
     listerClients({ page: 1, limit: 200 }),
+    listerCatalogue({ actif: true }),
   ]);
 
   return (
@@ -37,6 +39,10 @@ export default async function DevisPage({
         <NouveauDevisForm
           clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
           clientIdParDefaut={clientId}
+          catalogue={catalogue.map((a) => ({
+            nom: a.nom,
+            prixSuggereHTG: a.prixSuggereHTG?.toString() ?? null,
+          }))}
         />
 
         <table className="mt-8 w-full text-sm bg-white rounded-lg border border-slate-200 overflow-hidden">

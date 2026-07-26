@@ -4,15 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Ligne = { description: string; quantite: string; prixUnitaireHTG: string };
+type ArticleCatalogue = { nom: string; prixSuggereHTG: string | null };
 
 const LIGNE_VIDE: Ligne = { description: "", quantite: "1", prixUnitaireHTG: "" };
 
 export default function NouveauDevisForm({
   clients,
   clientIdParDefaut,
+  catalogue = [],
 }: {
   clients: { id: string; nom: string; code: string }[];
   clientIdParDefaut?: string;
+  catalogue?: ArticleCatalogue[];
 }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
@@ -23,7 +26,19 @@ export default function NouveauDevisForm({
   const [envoi, setEnvoi] = useState(false);
 
   function majLigne(index: number, champ: keyof Ligne, valeur: string) {
-    setLignes((prev) => prev.map((l, i) => (i === index ? { ...l, [champ]: valeur } : l)));
+    setLignes((prev) =>
+      prev.map((l, i) => {
+        if (i !== index) return l;
+        const majee = { ...l, [champ]: valeur };
+        if (champ === "description" && !l.prixUnitaireHTG) {
+          const article = catalogue.find((a) => a.nom === valeur);
+          if (article?.prixSuggereHTG) {
+            majee.prixUnitaireHTG = String(Number(article.prixSuggereHTG) / 100);
+          }
+        }
+        return majee;
+      })
+    );
   }
 
   function ajouterLigne() {
@@ -104,7 +119,8 @@ export default function NouveauDevisForm({
           <div key={i} className="flex gap-2 items-start">
             <input
               required
-              placeholder="Description"
+              list="catalogue-articles-devis"
+              placeholder="Description (ou choisir dans le catalogue)"
               value={ligne.description}
               onChange={(e) => majLigne(i, "description", e.target.value)}
               className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
@@ -144,6 +160,12 @@ export default function NouveauDevisForm({
           + Ajouter une ligne
         </button>
       </div>
+
+      <datalist id="catalogue-articles-devis">
+        {catalogue.map((a) => (
+          <option key={a.nom} value={a.nom} />
+        ))}
+      </datalist>
 
       <div className="w-40">
         <label className="block text-sm font-medium text-slate-700 mb-1">Taxe (%)</label>

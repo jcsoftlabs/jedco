@@ -4,26 +4,57 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Ligne = { description: string; quantite: string; prixUnitaireHTG: string };
+type ArticleCatalogue = { nom: string; prixSuggereHTG: string | null };
 
 const LIGNE_VIDE: Ligne = { description: "", quantite: "1", prixUnitaireHTG: "" };
+
+function dansNJours(n: number): string {
+  const d = new Date(Date.now() + n * 86_400_000);
+  return d.toISOString().slice(0, 10);
+}
+
+function joursEntreAujourdhuiEt(dateStr: string): number {
+  const cible = new Date(`${dateStr}T00:00:00`);
+  const diffMs = cible.getTime() - new Date().setHours(0, 0, 0, 0);
+  return Math.max(1, Math.round(diffMs / 86_400_000));
+}
 
 export default function NouvelleFactureForm({
   clients,
   clientIdParDefaut,
+  catalogue = [],
 }: {
   clients: { id: string; nom: string; code: string }[];
   clientIdParDefaut?: string;
+  catalogue?: ArticleCatalogue[];
 }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
   const [clientId, setClientId] = useState(clientIdParDefaut ?? "");
   const [lignes, setLignes] = useState<Ligne[]>([{ ...LIGNE_VIDE }]);
   const [tauxTaxePourcent, setTauxTaxePourcent] = useState("0");
+  const [dateEcheance, setDateEcheance] = useState(dansNJours(30));
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
   function majLigne(index: number, champ: keyof Ligne, valeur: string) {
-    setLignes((prev) => prev.map((l, i) => (i === index ? { ...l, [champ]: valeur } : l)));
+    setLignes((prev) =>
+      prev.map((l, i) => {
+        if (i !== index) return l;
+        const majee = { ...l, [champ]: valeur };
+        // Pré-remplit le prix depuis le catalogue si la description saisie
+        // correspond exactement à un article connu et que le prix n'a pas
+        // déjà été touché — reste modifiable, le tarif catalogue n'est
+        // qu'indicatif (voir prisma/schema.prisma sur ArticleCatalogue).
+        if (champ === "description" && !l.prixUnitaireHTG) {
+          const article = catalogue.find((a) => a.nom === valeur);
+          if (article?.prixSuggereHTG) {
+            majee.prixUnitaireHTG = String(Number(article.prixSuggereHTG) / 100);
+          }
+        }
+        return majee;
+      })
+    );
   }
 
   function ajouterLigne() {
@@ -50,6 +81,7 @@ export default function NouvelleFactureForm({
             prixUnitaireHTG: Number(l.prixUnitaireHTG),
           })),
           tauxTaxePourcent: Number(tauxTaxePourcent),
+          dateEcheanceJours: joursEntreAujourdhuiEt(dateEcheance),
         }),
       });
       const data = await res.json();
@@ -59,6 +91,7 @@ export default function NouvelleFactureForm({
       }
       setLignes([{ ...LIGNE_VIDE }]);
       setTauxTaxePourcent("0");
+      setDateEcheance(dansNJours(30));
       setOuvert(false);
       router.refresh();
     } catch {
@@ -104,7 +137,8 @@ export default function NouvelleFactureForm({
           <div key={i} className="flex gap-2 items-start">
             <input
               required
-              placeholder="Description"
+              list="catalogue-articles-facture"
+              placeholder="Description (ou choisir dans le catalogue)"
               value={ligne.description}
               onChange={(e) => majLigne(i, "description", e.target.value)}
               className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
@@ -145,17 +179,35 @@ export default function NouvelleFactureForm({
         </button>
       </div>
 
-      <div className="w-40">
-        <label className="block text-sm font-medium text-slate-700 mb-1">Taxe (%)</label>
-        <input
-          type="number"
-          min="0"
-          max="100"
-          step="0.1"
-          value={tauxTaxePourcent}
-          onChange={(e) => setTauxTaxePourcent(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
-        />
+      <datalist id="catalogue-articles-facture">
+        {catalogue.map((a) => (
+          <option key={a.nom} value={a.nom} />
+        ))}
+      </datalist>
+
+      <div className="flex gap-4">
+        <div className="w-40">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Taxe (%)</label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={tauxTaxePourcent}
+            onChange={(e) => setTauxTaxePourcent(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
+          />
+        </div>
+        <div className="w-48">
+          <label className="block text-sm font-medium text-slate-700 mb-1">Date d&apos;échéance</label>
+          <input
+            required
+            type="date"
+            value={dateEcheance}
+            onChange={(e) => setDateEcheance(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
+          />
+        </div>
       </div>
 
       {erreur && <p className="text-sm text-red-600">{erreur}</p>}

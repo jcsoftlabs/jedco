@@ -4,6 +4,7 @@ import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import AdminHeader from "../AdminHeader";
 import { listerFactures, statsFactures } from "@/lib/services/factures";
 import { listerClients } from "@/lib/services/clients";
+import { listerCatalogue } from "@/lib/services/catalogue";
 import { formatHTG } from "@/lib/money";
 import NouvelleFactureForm from "./NouvelleFactureForm";
 import FactureRow from "./FactureRow";
@@ -24,10 +25,11 @@ export default async function FacturesPage({
 
   const { clientId } = await searchParams;
 
-  const [{ data: factures }, { data: clients }, stats] = await Promise.all([
+  const [{ data: factures }, { data: clients }, stats, catalogue] = await Promise.all([
     listerFactures({ page: 1, limit: 50 }),
     listerClients({ page: 1, limit: 200 }),
     statsFactures({}),
+    listerCatalogue({ actif: true }),
   ]);
 
   return (
@@ -54,6 +56,10 @@ export default async function FacturesPage({
         <NouvelleFactureForm
           clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
           clientIdParDefaut={clientId}
+          catalogue={catalogue.map((a) => ({
+            nom: a.nom,
+            prixSuggereHTG: a.prixSuggereHTG?.toString() ?? null,
+          }))}
         />
 
         <table className="mt-8 w-full text-sm bg-white rounded-lg border border-slate-200 overflow-hidden">

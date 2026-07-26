@@ -38,6 +38,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <p className="text-sm text-slate-500">
           {client.code} — {client.type} — {client.ville} — {client.telephone}
         </p>
+        {(client.adresse || client.email) && (
+          <p className="text-sm text-slate-500">
+            {[client.adresse, client.email].filter(Boolean).join(" — ")}
+          </p>
+        )}
 
         {stats && (
           <div className="mt-4 flex gap-6 text-sm">

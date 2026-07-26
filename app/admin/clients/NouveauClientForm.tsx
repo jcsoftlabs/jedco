@@ -14,7 +14,13 @@ export default function NouveauClientForm() {
     setErreur(null);
     setEnvoi(true);
     const fd = new FormData(e.currentTarget);
-    const body = Object.fromEntries(fd.entries());
+    // Champs facultatifs : un champ laissé vide doit être omis plutôt
+    // qu'envoyé comme chaîne vide, sinon la validation email() du schéma
+    // (lib/schemas/clients.ts) le rejette alors qu'il s'agit d'une absence
+    // de valeur, pas d'une adresse invalide.
+    const body = Object.fromEntries(
+      [...fd.entries()].filter(([, valeur]) => String(valeur).trim() !== "")
+    );
 
     try {
       const res = await fetch("/api/clients", {
@@ -61,6 +67,17 @@ export default function NouveauClientForm() {
         name="ville"
         placeholder="Ville"
         defaultValue="Port-au-Prince"
+        className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+      />
+      <input
+        name="adresse"
+        placeholder="Adresse (optionnel)"
+        className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+      />
+      <input
+        name="email"
+        type="email"
+        placeholder="Adresse e-mail (optionnel)"
         className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
       />
       {erreur && <p className="text-sm text-red-600">{erreur}</p>}

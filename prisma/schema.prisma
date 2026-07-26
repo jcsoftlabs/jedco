@@ -403,6 +403,23 @@ model Paiement {
   createdAt      DateTime     @default(now())
 }
 
+// Catalogue de services/produits proposés par l'entreprise — sert uniquement
+// à accélérer la saisie des lignes de facture/devis (autocomplétion +
+// pré-remplissage du prix) : prixSuggereHTG reste indicatif et modifiable
+// ligne par ligne, les tarifs réels variant par client/négociation. Pas de
+// lien en base vers LigneFacture/LigneDevis — une ligne existante ne doit pas
+// se casser si l'article catalogue est renommé ou désactivé après coup.
+model ArticleCatalogue {
+  id              String       @id @default(cuid())
+  nom             String       @unique
+  description     String?
+  type            TypeService?
+  prixSuggereHTG  BigInt?
+  actif           Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
 // Devis (quotation) distinct d'une facture impayée : pas de contrainte de
 // séquence comptable ni des obligations fiscales d'une facture émise (§2.x).
 // Cycle de vie BROUILLON → ENVOYE → ACCEPTE/REFUSE/EXPIRE, avec un passage
