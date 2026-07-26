@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const TYPES_SERVICE = ["VIDANGE", "COLLECTE", "TOILETTE_MOBILE", "PEST_CONTROL", "NETTOYAGE", "AUTRE"];
+type OptionType = { code: string; libelle: string };
 
-export default function NouvelArticleForm() {
+export default function NouvelArticleForm({ typesService }: { typesService: OptionType[] }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
   const [nom, setNom] = useState("");
@@ -72,9 +72,9 @@ export default function NouvelArticleForm() {
           className="rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
         >
           <option value="">Type (optionnel)</option>
-          {TYPES_SERVICE.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          {typesService.map((t) => (
+            <option key={t.code} value={t.code}>
+              {t.libelle}
             </option>
           ))}
         </select>

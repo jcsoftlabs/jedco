@@ -3,20 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const SERVICES = [
-  { value: "VIDANGE", label: "Vidange de fosses septiques" },
-  { value: "COLLECTE", label: "Collecte d'ordures" },
-  { value: "TOILETTE_MOBILE", label: "Toilettes mobiles" },
-  { value: "PEST_CONTROL", label: "Pest Control" },
-  { value: "NETTOYAGE", label: "Nettoyage industriel" },
-  { value: "AUTRE", label: "Autre" },
-];
+type OptionType = { code: string; libelle: string };
 
 export default function NouveauContratForm({
   clients,
+  typesService,
   clientIdParDefaut,
 }: {
   clients: { id: string; nom: string; code: string }[];
+  typesService: OptionType[];
   clientIdParDefaut?: string;
 }) {
   const router = useRouter();
@@ -94,10 +89,10 @@ export default function NouveauContratForm({
 
       <fieldset className="space-y-1">
         <legend className="text-xs font-medium text-slate-500 mb-1">Services couverts</legend>
-        {SERVICES.map((s) => (
-          <label key={s.value} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="services" value={s.value} />
-            {s.label}
+        {typesService.map((s) => (
+          <label key={s.code} className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="services" value={s.code} />
+            {s.libelle}
           </label>
         ))}
       </fieldset>

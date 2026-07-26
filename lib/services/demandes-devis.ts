@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/db";
 import { creerClient } from "@/lib/services/clients";
+import { verifierTypesService } from "@/lib/services/types-reference";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { CreerDemandeDevisInput, ListeDemandesDevisParams } from "@/lib/schemas/demandes-devis";
 
 export async function creerDemandeDevis(input: CreerDemandeDevisInput) {
+  // Route publique non authentifiée : la validation du type est la seule
+  // barrière restante depuis la disparition de l’énumération.
+  await verifierTypesService([input.service]);
   return prisma.demandeDevis.create({ data: input });
 }
 

@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const TYPES_SERVICE = ["VIDANGE", "COLLECTE", "TOILETTE_MOBILE", "PEST_CONTROL", "NETTOYAGE", "AUTRE"];
+type OptionType = { code: string; libelle: string };
 
-export default function NouveauTechnicienForm() {
+export default function NouveauTechnicienForm({ typesService }: { typesService: OptionType[] }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
   const [specialites, setSpecialites] = useState<string[]>([]);
@@ -100,18 +100,18 @@ export default function NouveauTechnicienForm() {
       <div>
         <label className="block text-xs font-medium text-slate-600 mb-1">Spécialités</label>
         <div className="flex flex-wrap gap-2">
-          {TYPES_SERVICE.map((t) => (
+          {typesService.map((t) => (
             <button
-              key={t}
+              key={t.code}
               type="button"
-              onClick={() => basculerSpecialite(t)}
+              onClick={() => basculerSpecialite(t.code)}
               className={`text-xs rounded-full border px-2.5 py-1 ${
-                specialites.includes(t)
+                specialites.includes(t.code)
                   ? "border-jedco bg-jedco/10 text-jedco"
                   : "border-slate-300 text-slate-600 hover:bg-slate-50"
               }`}
             >
-              {t}
+              {t.libelle}
             </button>
           ))}
         </div>

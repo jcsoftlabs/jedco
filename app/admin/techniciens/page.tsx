@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerTechniciens } from "@/lib/services/techniciens";
+import { listerTypesService } from "@/lib/services/types-reference";
 import NouveauTechnicienForm from "./NouveauTechnicienForm";
 import TechnicienRow from "./TechnicienRow";
 
@@ -15,7 +16,7 @@ export default async function TechniciensPage() {
     throw e;
   }
 
-  const techniciens = await listerTechniciens();
+  const [techniciens, typesService] = await Promise.all([listerTechniciens(), listerTypesService(true)]);
 
   return (
     <div className="max-w-3xl">
@@ -26,7 +27,7 @@ export default async function TechniciensPage() {
           <span className="font-mono text-xs">/admin/terrain</span>.
         </p>
 
-        {user.role === "ADMIN" && <NouveauTechnicienForm />}
+        {user.role === "ADMIN" && <NouveauTechnicienForm typesService={typesService} />}
 
         <table className="mt-8 w-full text-sm bg-white rounded-lg border border-slate-200 overflow-hidden">
           <thead>

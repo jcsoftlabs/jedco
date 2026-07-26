@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { statsPilotage } from "@/lib/services/pilotage";
+import { listerTypesService } from "@/lib/services/types-reference";
 import { formatHTG, centimesToHTG } from "@/lib/money";
 import RevenusChart from "./charts/RevenusChart";
 import RevenusParServiceChart from "./charts/RevenusParServiceChart";
@@ -94,7 +95,8 @@ export default async function AdminHomePage() {
   // sert à rien. Terrain est l'écran conçu pour son usage quotidien.
   if (user.role === "TECHNICIEN") redirect("/admin/terrain");
 
-  const stats = await statsPilotage();
+  const [stats, typesService] = await Promise.all([statsPilotage(), listerTypesService()]);
+  const libellesService = Object.fromEntries(typesService.map((t) => [t.code, t.libelle]));
 
   const pointsGraphe = stats.serieMensuelle.map((p) => ({
     libelle: p.libelle,
@@ -188,7 +190,7 @@ export default async function AdminHomePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold text-jedco-dark">Revenus par service</h3>
-          <RevenusParServiceChart parts={partsService} />
+          <RevenusParServiceChart parts={partsService} libellesService={libellesService} />
         </div>
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

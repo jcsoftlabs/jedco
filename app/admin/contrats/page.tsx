@@ -5,6 +5,7 @@ import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerContrats } from "@/lib/services/contrats";
 import { listerClients } from "@/lib/services/clients";
 import { formatHTG } from "@/lib/money";
+import { listerTypesService } from "@/lib/services/types-reference";
 import NouveauContratForm from "./NouveauContratForm";
 
 export default async function ContratsPage({
@@ -23,15 +24,17 @@ export default async function ContratsPage({
 
   const { clientId } = await searchParams;
 
-  const [{ data: contrats }, { data: clients }] = await Promise.all([
+  const [{ data: contrats }, { data: clients }, typesService] = await Promise.all([
     listerContrats({ page: 1, limit: 50 }),
     listerClients({ page: 1, limit: 200 }),
+    listerTypesService(true),
   ]);
 
   return (
     <div className="max-w-4xl">
         <h2 className="text-xl font-bold text-jedco-dark mb-6">Contrats</h2>
         <NouveauContratForm
+          typesService={typesService}
           clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
           clientIdParDefaut={clientId}
         />

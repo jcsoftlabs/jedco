@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerCatalogue } from "@/lib/services/catalogue";
+import { listerTypesService } from "@/lib/services/types-reference";
 import NouvelArticleForm from "./NouvelArticleForm";
 import ArticleRow from "./ArticleRow";
 
@@ -15,7 +16,7 @@ export default async function CataloguePage() {
     throw e;
   }
 
-  const articles = await listerCatalogue();
+  const [articles, typesService] = await Promise.all([listerCatalogue(), listerTypesService(true)]);
 
   return (
     <div className="max-w-3xl">
@@ -25,7 +26,7 @@ export default async function CataloguePage() {
           et modifiables ligne par ligne.
         </p>
 
-        <NouvelArticleForm />
+        <NouvelArticleForm typesService={typesService} />
 
         <table className="mt-8 w-full text-sm bg-white rounded-lg border border-slate-200 overflow-hidden">
           <thead>

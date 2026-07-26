@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { htgToCentimes } from "@/lib/money";
 import { ErreurMetier } from "@/lib/errors";
 import { STATUTS_ACTIFS } from "@/lib/interventions/statut";
+import { verifierTypeVehicule } from "@/lib/services/types-reference";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { StatutVehicule } from "@/app/generated/prisma/enums";
 import type {
@@ -57,6 +58,7 @@ export async function obtenirVehicule(id: string) {
 }
 
 export async function creerVehicule(input: CreerVehiculeInput) {
+  await verifierTypeVehicule(input.type);
   const immatriculation = normaliserImmatriculation(input.immatriculation);
 
   const existant = await prisma.vehicule.findUnique({ where: { immatriculation } });
@@ -70,6 +72,8 @@ export async function creerVehicule(input: CreerVehiculeInput) {
 export async function modifierVehicule(id: string, input: ModifierVehiculeInput) {
   const vehicule = await prisma.vehicule.findFirst({ where: { id, deletedAt: null } });
   if (!vehicule) return null;
+
+  if (input.type) await verifierTypeVehicule(input.type);
 
   const immatriculation = input.immatriculation
     ? normaliserImmatriculation(input.immatriculation)

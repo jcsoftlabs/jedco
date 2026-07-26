@@ -5,6 +5,7 @@ import { transitionValide } from "@/lib/interventions/statut";
 import { debutJourLocal, finJourLocal } from "@/lib/dates";
 import { scopeInterventions } from "@/lib/auth/rbac";
 import { STATUTS_VEHICULE_INDISPONIBLE } from "@/lib/services/vehicules";
+import { verifierTypesService } from "@/lib/services/types-reference";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { Role, StatutIntervention } from "@/app/generated/prisma/enums";
 import type {
@@ -59,6 +60,10 @@ export async function obtenirIntervention(id: string, user: UtilisateurScope) {
 export async function creerIntervention(input: CreerInterventionInput) {
   const client = await prisma.client.findFirst({ where: { id: input.clientId, deletedAt: null } });
   if (!client) throw new ErreurMetier("Client introuvable", 400);
+
+  // Remplace la garantie que donnait l’énumération PostgreSQL (voir la
+  // migration types_reference) : la colonne est désormais du texte libre.
+  await verifierTypesService([input.type]);
 
   if (input.contratId) {
     const contrat = await prisma.contrat.findFirst({

@@ -3,22 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const TYPES = [
-  { value: "VIDANGE", label: "Vidange de fosses septiques" },
-  { value: "COLLECTE", label: "Collecte d'ordures" },
-  { value: "TOILETTE_MOBILE", label: "Toilettes mobiles" },
-  { value: "PEST_CONTROL", label: "Pest Control" },
-  { value: "NETTOYAGE", label: "Nettoyage industriel" },
-  { value: "AUTRE", label: "Autre" },
-];
+type OptionType = { code: string; libelle: string };
 
 export default function NouvelleInterventionForm({
   clients,
   vehicules,
   techniciens,
+  typesService,
 }: {
   clients: { id: string; nom: string; code: string }[];
   vehicules: { id: string; immatriculation: string; marque: string }[];
+  typesService: OptionType[];
   techniciens: { id: string; matricule: string; nom: string; prenom: string; disponible: boolean }[];
 }) {
   const router = useRouter();
@@ -100,10 +95,13 @@ export default function NouvelleInterventionForm({
         ))}
       </select>
 
-      <select name="type" defaultValue="VIDANGE" className="w-full rounded border border-slate-300 px-3 py-2 text-sm">
-        {TYPES.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
+      <select name="type" required defaultValue="" className="w-full rounded border border-slate-300 px-3 py-2 text-sm">
+        <option value="" disabled>
+          Sélectionner un service
+        </option>
+        {typesService.map((t) => (
+          <option key={t.code} value={t.code}>
+            {t.libelle}
           </option>
         ))}
       </select>

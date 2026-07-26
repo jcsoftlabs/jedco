@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { htgToCentimes } from "@/lib/money";
 import { ErreurMetier } from "@/lib/errors";
+import { verifierTypesService } from "@/lib/services/types-reference";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type {
   CreerArticleCatalogueInput,
@@ -16,6 +17,7 @@ export async function listerCatalogue(params: ListeCatalogueParams = {}) {
 }
 
 export async function creerArticleCatalogue(input: CreerArticleCatalogueInput) {
+  if (input.type) await verifierTypesService([input.type]);
   const existant = await prisma.articleCatalogue.findUnique({ where: { nom: input.nom } });
   if (existant) throw new ErreurMetier("Un article avec ce nom existe déjà au catalogue", 409);
 

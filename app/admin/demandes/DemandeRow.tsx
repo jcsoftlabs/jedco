@@ -3,18 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const LIBELLE_SERVICE: Record<string, string> = {
-  VIDANGE: "Vidange de fosses septiques",
-  COLLECTE: "Collecte d'ordures",
-  TOILETTE_MOBILE: "Toilettes mobiles",
-  PEST_CONTROL: "Pest Control",
-  NETTOYAGE: "Nettoyage industriel",
-  AUTRE: "Contrats municipaux / Autre",
-};
-
 export default function DemandeRow({
   demande,
+  libellesService,
 }: {
+  /** code → libellé, issu de la table de référence TypeService. */
+  libellesService: Record<string, string>;
   demande: {
     id: string;
     nom: string;
@@ -55,7 +49,7 @@ export default function DemandeRow({
         setErreur(data.error ?? "Erreur");
         return;
       }
-      const libelle = LIBELLE_SERVICE[data.data.service] ?? data.data.service;
+      const libelle = libellesService[data.data.service] ?? data.data.service;
       router.push(`/admin/devis?clientId=${data.data.clientId}&description=${encodeURIComponent(libelle)}&ouvrir=1`);
     } catch {
       setErreur("Connexion impossible.");
@@ -88,7 +82,7 @@ export default function DemandeRow({
           {demande.email && <span> — {demande.email}</span>}
         </p>
         <p>
-          {LIBELLE_SERVICE[demande.service] ?? demande.service} — {demande.ville}
+          {libellesService[demande.service] ?? demande.service} — {demande.ville}
         </p>
         {demande.message && <p className="italic text-slate-500">&quot;{demande.message}&quot;</p>}
       </div>

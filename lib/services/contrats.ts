@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { referenceContrat } from "@/lib/codes";
 import { htgToCentimes } from "@/lib/money";
 import { ErreurMetier } from "@/lib/errors";
+import { verifierTypesService } from "@/lib/services/types-reference";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { TypeContrat } from "@/app/generated/prisma/enums";
 import type { CreerContratInput, ListeContratsParams, ModifierContratInput } from "@/lib/schemas/contrats";
@@ -43,6 +44,8 @@ export async function obtenirContrat(id: string) {
 export async function creerContrat(input: CreerContratInput) {
   const client = await prisma.client.findFirst({ where: { id: input.clientId, deletedAt: null } });
   if (!client) throw new ErreurMetier("Client introuvable", 400);
+
+  await verifierTypesService(input.services);
 
   const reference = await referenceContrat();
   return prisma.contrat.create({

@@ -7,11 +7,9 @@
 // simples objets) arrivent alors indéfinis côté serveur. La fiche affichait
 // pour cette raison « CAMION_ASPIRATEUR » brut au lieu de « Camion
 // aspirateur », alors que la table, elle, affichait le bon libellé.
-export const LIBELLE_TYPE: Record<string, string> = {
-  CAMION_ASPIRATEUR: "Camion aspirateur",
-  CAMION_COLLECTE: "Camion de collecte",
-  UTILITAIRE: "Utilitaire",
-};
+// LIBELLE_TYPE a disparu : les types de véhicule viennent désormais de la
+// table de référence TypeVehicule et sont passés en props depuis les pages
+// serveur, plutôt que d'être dupliqués ici.
 
 export const LIBELLE_STATUT: Record<string, string> = {
   DISPONIBLE: "Disponible",

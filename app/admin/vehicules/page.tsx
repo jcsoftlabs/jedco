@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerVehicules, statsFlotte } from "@/lib/services/vehicules";
+import { listerTypesVehicule } from "@/lib/services/types-reference";
 import { formatHTG } from "@/lib/money";
 import NouveauVehiculeForm from "./NouveauVehiculeForm";
 import VehiculesTable from "./VehiculesTable";
@@ -16,14 +17,20 @@ export default async function VehiculesPage() {
     throw e;
   }
 
-  const [vehicules, stats] = await Promise.all([listerVehicules(), statsFlotte()]);
+  const [vehicules, stats, typesVehicule] = await Promise.all([
+    listerVehicules(),
+    statsFlotte(),
+    // Tous les types, pas seulement les actifs : un véhicule existant peut
+    // porter un type depuis désactivé, et sa ligne doit rester lisible.
+    listerTypesVehicule(),
+  ]);
   const maintenant = Date.now();
 
   return (
     <div className="max-w-6xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-jedco-dark">Flotte</h2>
-        <NouveauVehiculeForm />
+        <NouveauVehiculeForm typesVehicule={typesVehicule.filter((t) => t.actif)} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -69,6 +76,7 @@ export default async function VehiculesPage() {
       )}
 
       <VehiculesTable
+        libellesType={Object.fromEntries(typesVehicule.map((t) => [t.code, t.libelle]))}
         vehicules={vehicules.map((v) => ({
           id: v.id,
           immatriculation: v.immatriculation,

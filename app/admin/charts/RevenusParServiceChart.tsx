@@ -11,22 +11,20 @@ import { useState } from "react";
 const RAMPE = ["#0d366b", "#1c5cab", "#2a78d6", "#5598e7", "#86b6ef"];
 const GRIS_AUTRE = "#94a3b8";
 
-const LIBELLE_SERVICE: Record<string, string> = {
-  VIDANGE: "Vidange fosses septiques",
-  COLLECTE: "Collecte d'ordures",
-  TOILETTE_MOBILE: "Toilettes mobiles",
-  PEST_CONTROL: "Pest Control",
-  NETTOYAGE: "Nettoyage industriel",
-  AUTRE: "Autre",
-};
-
 export type PartService = { service: string; montantHTG: number };
 
 function formatCompletHTG(valeurHTG: number): string {
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(valeurHTG)} HTG`;
 }
 
-export default function RevenusParServiceChart({ parts }: { parts: PartService[] }) {
+export default function RevenusParServiceChart({
+  parts,
+  libellesService,
+}: {
+  parts: PartService[];
+  /** code → libellé, issu de la table de référence TypeService. */
+  libellesService: Record<string, string>;
+}) {
   const [actif, setActif] = useState<string | null>(null);
 
   if (parts.length === 0) {
@@ -56,7 +54,7 @@ export default function RevenusParServiceChart({ parts }: { parts: PartService[]
         const estAutres = ligne.service === "__autres__";
         const libelle = estAutres
           ? `Autres services (${reste.length})`
-          : LIBELLE_SERVICE[ligne.service] ?? ligne.service;
+          : libellesService[ligne.service] ?? ligne.service;
         const couleur = estAutres ? GRIS_AUTRE : RAMPE[i];
         const pourcent = (ligne.montantHTG / max) * 100;
 

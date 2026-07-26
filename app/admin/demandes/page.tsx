@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { listerDemandesDevis } from "@/lib/services/demandes-devis";
+import { listerTypesService } from "@/lib/services/types-reference";
 import DemandeRow from "./DemandeRow";
 
 export default async function DemandesPage() {
@@ -14,7 +15,11 @@ export default async function DemandesPage() {
     throw e;
   }
 
-  const { data: demandes } = await listerDemandesDevis({ page: 1, limit: 100 });
+  const [{ data: demandes }, typesService] = await Promise.all([
+    listerDemandesDevis({ page: 1, limit: 100 }),
+    listerTypesService(),
+  ]);
+  const libellesService = Object.fromEntries(typesService.map((t) => [t.code, t.libelle]));
   const nonTraitees = demandes.filter((d) => !d.traite).length;
 
   return (
@@ -29,6 +34,7 @@ export default async function DemandesPage() {
           {demandes.map((d) => (
             <DemandeRow
               key={d.id}
+              libellesService={libellesService}
               demande={{
                 id: d.id,
                 nom: d.nom,

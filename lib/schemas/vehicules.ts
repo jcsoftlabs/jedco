@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { typeVehiculeSchema } from "@/lib/schemas/enums";
 
-export const typeVehiculeSchema = z.enum(["CAMION_ASPIRATEUR", "CAMION_COLLECTE", "UTILITAIRE"]);
+export { typeVehiculeSchema };
 export const statutVehiculeSchema = z.enum(["DISPONIBLE", "EN_SERVICE", "EN_MAINTENANCE", "HORS_SERVICE"]);
 export const typeEntretienSchema = z.enum([
   "VIDANGE_MOTEUR",

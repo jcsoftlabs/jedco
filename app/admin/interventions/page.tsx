@@ -4,6 +4,7 @@ import { utilisateurCourant } from "@/lib/auth/current-user";
 import { listerInterventions } from "@/lib/services/interventions";
 import { listerClients } from "@/lib/services/clients";
 import { listerTechniciens } from "@/lib/services/techniciens";
+import { listerTypesService } from "@/lib/services/types-reference";
 import { prisma } from "@/lib/db";
 import NouvelleInterventionForm from "./NouvelleInterventionForm";
 import InterventionsTable from "./InterventionsTable";
@@ -12,11 +13,12 @@ export default async function InterventionsPage() {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
 
-  const [{ data: interventions }, { data: clients }, vehicules, techniciens] = await Promise.all([
+  const [{ data: interventions }, { data: clients }, vehicules, techniciens, typesService] = await Promise.all([
     listerInterventions({ page: 1, limit: 200 }, user),
     listerClients({ page: 1, limit: 200 }),
     prisma.vehicule.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" } }),
     listerTechniciens(),
+    listerTypesService(true),
   ]);
 
   return (
@@ -34,6 +36,7 @@ export default async function InterventionsPage() {
             prenom: t.user.prenom,
             disponible: t.disponible,
           }))}
+          typesService={typesService}
         />
         <Link
           href="/admin/vehicules"

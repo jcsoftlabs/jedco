@@ -3,13 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const TYPES = [
-  { valeur: "CAMION_ASPIRATEUR", label: "Camion aspirateur" },
-  { valeur: "CAMION_COLLECTE", label: "Camion de collecte" },
-  { valeur: "UTILITAIRE", label: "Utilitaire" },
-];
+type OptionType = { code: string; libelle: string };
 
-export default function NouveauVehiculeForm() {
+export default function NouveauVehiculeForm({ typesVehicule }: { typesVehicule: OptionType[] }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -81,12 +77,16 @@ export default function NouveauVehiculeForm() {
           <label className="mb-1 block text-xs font-medium text-slate-600">Type</label>
           <select
             name="type"
-            defaultValue="CAMION_ASPIRATEUR"
+            required
+            defaultValue=""
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
           >
-            {TYPES.map((t) => (
-              <option key={t.valeur} value={t.valeur}>
-                {t.label}
+            <option value="" disabled>
+              Sélectionner…
+            </option>
+            {typesVehicule.map((t) => (
+              <option key={t.code} value={t.code}>
+                {t.libelle}
               </option>
             ))}
           </select>

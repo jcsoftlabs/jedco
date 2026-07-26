@@ -3,16 +3,9 @@
 import { useState } from "react";
 import FadeUp from "./FadeUp";
 
-const SERVICES = [
-  { value: "VIDANGE", label: "Vidange de fosses septiques" },
-  { value: "COLLECTE", label: "Collecte d'ordures" },
-  { value: "TOILETTE_MOBILE", label: "Toilettes mobiles" },
-  { value: "PEST_CONTROL", label: "Pest Control" },
-  { value: "NETTOYAGE", label: "Nettoyage industriel" },
-  { value: "AUTRE", label: "Contrats municipaux" },
-];
+type OptionService = { code: string; libelle: string };
 
-export default function ContactForm() {
+export default function ContactForm({ services }: { services: OptionService[] }) {
   const [submitted, setSubmitted] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -88,9 +81,9 @@ export default function ContactForm() {
                 <label htmlFor="service" className="block text-sm font-medium text-slate-700 mb-1">Service</label>
                 <select id="service" name="service" required className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30">
                   <option value="">Sélectionnez un service</option>
-                  {SERVICES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
+                  {services.map((s) => (
+                    <option key={s.code} value={s.code}>
+                      {s.libelle}
                     </option>
                   ))}
                 </select>

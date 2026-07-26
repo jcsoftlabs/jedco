@@ -7,6 +7,7 @@ import Gallery from "./components/Gallery";
 import Testimonials from "./components/Testimonials";
 import ContactForm from "./components/ContactForm";
 import Footer from "./components/Footer";
+import { listerTypesService } from "@/lib/services/types-reference";
 
 // Gallery et Testimonials lisent la base à chaque rendu (Phase 4, vitrine
 // dynamique) — sans ceci, Next.js prérend "/" une seule fois au build et une
@@ -15,7 +16,9 @@ import Footer from "./components/Footer";
 // visibles rapidement, assez long pour ne pas requêter la base à chaque visite.
 export const revalidate = 60;
 
-export default function Home() {
+export default async function Home() {
+  const services = await listerTypesService(true);
+
   return (
     <>
       <Header />
@@ -25,7 +28,7 @@ export default function Home() {
       <Coverage />
       <Gallery />
       <Testimonials />
-      <ContactForm />
+      <ContactForm services={services} />
       <Footer />
     </>
   );

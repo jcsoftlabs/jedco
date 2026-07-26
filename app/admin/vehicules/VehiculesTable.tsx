@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import TableauFiltrable from "../TableauFiltrable";
-import { LIBELLE_TYPE, LIBELLE_STATUT, COULEUR_STATUT } from "./libelles";
+import { LIBELLE_STATUT, COULEUR_STATUT } from "./libelles";
 
 type Vehicule = {
   id: string;
@@ -16,14 +16,21 @@ type Vehicule = {
   nbInterventions: number;
 };
 
-export default function VehiculesTable({ vehicules }: { vehicules: Vehicule[] }) {
+export default function VehiculesTable({
+  vehicules,
+  libellesType,
+}: {
+  vehicules: Vehicule[];
+  /** code → libellé, issu de la table de référence TypeVehicule. */
+  libellesType: Record<string, string>;
+}) {
   const maintenant = Date.now();
 
   return (
     <TableauFiltrable
       lignes={vehicules}
       placeholder="Rechercher un véhicule (immatriculation, marque, modèle…)"
-      texteDe={(v) => [v.immatriculation, v.marque, v.modele, LIBELLE_TYPE[v.type], LIBELLE_STATUT[v.statut]]}
+      texteDe={(v) => [v.immatriculation, v.marque, v.modele, libellesType[v.type], LIBELLE_STATUT[v.statut]]}
       valeurFiltreDe={(v) => v.statut}
       filtres={{
         label: "Statut",
@@ -60,7 +67,7 @@ export default function VehiculesTable({ vehicules }: { vehicules: Vehicule[] })
                     <td className="px-4 text-slate-600">
                       {v.marque} {v.modele}
                     </td>
-                    <td className="px-4 text-slate-600">{LIBELLE_TYPE[v.type] ?? v.type}</td>
+                    <td className="px-4 text-slate-600">{libellesType[v.type] ?? v.type}</td>
                     <td className="px-4 tabular-nums text-slate-600">
                       {new Intl.NumberFormat("fr-FR").format(v.kilometrage)} km
                     </td>

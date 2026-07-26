@@ -36,15 +36,6 @@ enum StatutContrat {
   RESILIE
 }
 
-enum TypeService {
-  VIDANGE
-  COLLECTE
-  TOILETTE_MOBILE
-  PEST_CONTROL
-  NETTOYAGE
-  AUTRE
-}
-
 enum StatutIntervention {
   EN_ATTENTE
   PLANIFIE
@@ -56,12 +47,6 @@ enum StatutIntervention {
 enum Priorite {
   NORMALE
   URGENTE
-}
-
-enum TypeVehicule {
-  CAMION_ASPIRATEUR
-  CAMION_COLLECTE
-  UTILITAIRE
 }
 
 enum StatutVehicule {
@@ -107,6 +92,41 @@ enum StatutDevis {
   REFUSE
   EXPIRE
   CONVERTI
+}
+
+// ─── PARAMÉTRAGE MÉTIER ──────────────────────────────────────────────────────
+
+// Types de prestation et de véhicule, administrables depuis le backoffice.
+//
+// C'étaient des enum PostgreSQL jusqu'à la migration types_reference : ajouter
+// une prestation imposait alors une migration de base. Ce sont des données de
+// paramétrage métier, pas de la structure.
+//
+// Les colonnes qui portent ces codes (Intervention.type, Contrat.services,
+// Technicien.specialites, LigneFacture.service…) restent du texte SANS clé
+// étrangère : deux d'entre elles sont des TABLEAUX, sur lesquels PostgreSQL ne
+// sait pas poser de FK. L'intégrité est donc vérifiée côté service —
+// verifierTypesService / verifierTypeVehicule dans
+// lib/services/types-reference.ts — et non par la base.
+//
+// Le champ "code" est la clé primaire plutôt qu'un id technique : c'est cette
+// valeur qui est déjà stockée dans toutes les colonnes existantes.
+model TypeService {
+  code      String   @id
+  libelle   String
+  actif     Boolean  @default(true)
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TypeVehicule {
+  code      String   @id
+  libelle   String
+  actif     Boolean  @default(true)
+  ordre     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── AUTH & AUDIT (nouveau — §1.6, §1.10) ────────────────────────────────────
@@ -191,7 +211,7 @@ model Contrat {
   clientId           String
   client             Client         @relation(fields: [clientId], references: [id])
   type               TypeContrat
-  services           TypeService[]
+  services           String[]
   // Montant en centimes HTG — BigInt (§1.7) : un INTEGER Postgres plafonne à
   // ~21,4M HTG, insuffisant pour un contrat municipal pluriannuel.
   // Pas de montantUSD stocké (§1.11) : la gourde est volatile, un montant USD
@@ -220,7 +240,7 @@ model Intervention {
   client           Client                   @relation(fields: [clientId], references: [id])
   contratId        String?
   contrat          Contrat?                 @relation(fields: [contratId], references: [id])
-  type             TypeService
+  type             String
   description      String?
   adresse          String
   ville            String
@@ -267,7 +287,7 @@ model Technicien {
   userId         String                   @unique
   user           User                     @relation(fields: [userId], references: [id])
   matricule      String                   @unique // TECH-001
-  specialites    TypeService[]
+  specialites    String[]
   zonesAssignees String[]
   disponible     Boolean                  @default(true)
   interventions  InterventionTechnicien[]
@@ -298,7 +318,7 @@ model Vehicule {
   immatriculation   String         @unique
   marque            String
   modele            String
-  type              TypeVehicule
+  type              String
   statut            StatutVehicule @default(DISPONIBLE)
   kilometrage       Int            @default(0)
   dernierEntretien  DateTime?
@@ -360,7 +380,7 @@ model ToiletteMobile {
 model Media {
   id             String        @id @default(cuid())
   url            String
-  type           TypeService?
+  type           String?
   interventionId String?
   intervention   Intervention? @relation(fields: [interventionId], references: [id])
   legende        String?
@@ -416,7 +436,7 @@ model LigneFacture {
   factureId       String
   facture         Facture      @relation(fields: [factureId], references: [id], onDelete: Cascade)
   description     String
-  service         TypeService?
+  service         String?
   quantite        Int          @default(1)
   prixUnitaireHTG BigInt
   totalHTG        BigInt
@@ -449,7 +469,7 @@ model ArticleCatalogue {
   id              String       @id @default(cuid())
   nom             String       @unique
   description     String?
-  type            TypeService?
+  type            String?
   prixSuggereHTG  BigInt?
   actif           Boolean      @default(true)
   createdAt       DateTime     @default(now())
@@ -489,7 +509,7 @@ model LigneDevis {
   devisId         String
   devis           Devis        @relation(fields: [devisId], references: [id], onDelete: Cascade)
   description     String
-  service         TypeService?
+  service         String?
   quantite        Int          @default(1)
   prixUnitaireHTG BigInt
   totalHTG        BigInt
@@ -503,7 +523,7 @@ model DemandeDevis {
   nom       String
   telephone String
   email     String?
-  service   TypeService
+  service   String
   ville     String
   message   String?
   traite    Boolean     @default(false)
@@ -515,7 +535,7 @@ model RendezVous {
   nom        String
   telephone  String
   email      String?
-  service    TypeService
+  service    String
   ville      String
   adresse    String?
   dateVoulue DateTime

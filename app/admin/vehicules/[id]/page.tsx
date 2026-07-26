@@ -4,7 +4,8 @@ import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
 import { obtenirVehicule } from "@/lib/services/vehicules";
 import { formatHTG } from "@/lib/money";
-import { LIBELLE_TYPE, LIBELLE_STATUT, COULEUR_STATUT, LIBELLE_ENTRETIEN } from "../libelles";
+import { LIBELLE_STATUT, COULEUR_STATUT, LIBELLE_ENTRETIEN } from "../libelles";
+import { listerTypesVehicule } from "@/lib/services/types-reference";
 import ActionsVehicule from "./ActionsVehicule";
 import EntretienForm from "./EntretienForm";
 
@@ -21,6 +22,9 @@ export default async function VehiculeDetailPage({ params }: { params: Promise<{
   const { id } = await params;
   const vehicule = await obtenirVehicule(id);
   if (!vehicule) notFound();
+
+  const typesVehicule = await listerTypesVehicule();
+  const libelleType = typesVehicule.find((t) => t.code === vehicule.type)?.libelle ?? vehicule.type;
 
   const coutTotal = vehicule.entretiens.reduce((s, e) => s + e.coutHTG, 0n);
 
@@ -39,7 +43,7 @@ export default async function VehiculeDetailPage({ params }: { params: Promise<{
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500">
-          {vehicule.marque} {vehicule.modele} — {LIBELLE_TYPE[vehicule.type] ?? vehicule.type}
+          {vehicule.marque} {vehicule.modele} — {libelleType}
         </p>
       </div>
 

@@ -30,6 +30,7 @@ const I = {
   factures: "M14 3v5h5M8 13h8M8 17h5M6 3h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z",
   devis: "M9 12h6m-6 4h4M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 5h6",
   catalogue: "M4 6h16M4 12h16M4 18h16M2.5 6h.01M2.5 12h.01M2.5 18h.01",
+  types: "M10.3 4.3 4 10.6a2 2 0 0 0 0 2.8l6.6 6.6a2 2 0 0 0 2.8 0l6.3-6.3a2 2 0 0 0 .6-1.4V5a1 1 0 0 0-1-1h-7.3a2 2 0 0 0-1.4.6ZM16.5 8h.01",
   flotte: "M3 12h13l3 4h2v3h-2M3 12V7a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v5M3 12v7h2M7.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
 };
 
@@ -47,6 +48,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/catalogue", label: "Catalogue", icone: <Icone d={I.catalogue} /> },
   { href: "/admin/galerie", label: "Galerie", icone: <Icone d={I.galerie} /> },
   { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },
+  { href: "/admin/types", label: "Types", icone: <Icone d={I.types} /> },
 ];
 
 // Un TECHNICIEN n'a accès qu'aux deux pages sans requireRole ADMIN/SUPERVISEUR
