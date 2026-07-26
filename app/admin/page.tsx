@@ -31,6 +31,10 @@ export default async function AdminHomePage() {
             <span className="block font-semibold text-jedco-dark">Interventions</span>
             <span className="text-sm text-slate-500">Planifier et suivre</span>
           </Link>
+          <Link href="/admin/factures" className="rounded-lg bg-white border border-slate-200 px-5 py-4 hover:shadow-md transition">
+            <span className="block font-semibold text-jedco-dark">Facturation</span>
+            <span className="text-sm text-slate-500">Factures et paiements</span>
+          </Link>
         </div>
       </main>
     </div>
