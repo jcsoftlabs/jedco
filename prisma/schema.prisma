@@ -71,6 +71,15 @@ enum StatutVehicule {
   HORS_SERVICE
 }
 
+enum TypeEntretien {
+  VIDANGE_MOTEUR
+  REVISION
+  REPARATION
+  PNEUS
+  CARROSSERIE
+  AUTRE
+}
+
 enum StatutToilette {
   DISPONIBLE
   LOUEE
@@ -296,9 +305,36 @@ model Vehicule {
   prochainEntretien DateTime?
   notes             String?
   interventions     Intervention[]
+  entretiens        EntretienVehicule[]
   deletedAt         DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+
+  @@index([statut, deletedAt])
+}
+
+// Historique d'entretien — chaque passage à l'atelier laisse une ligne, plutôt
+// que d'écraser les seuls champs dernierEntretien/prochainEntretien du
+// véhicule. Sans cet historique, impossible de savoir ce qui a déjà été fait
+// ni ce que la flotte a coûté.
+model EntretienVehicule {
+  id                String        @id @default(cuid())
+  vehiculeId        String
+  vehicule          Vehicule      @relation(fields: [vehiculeId], references: [id])
+  type              TypeEntretien
+  description       String?
+  // Coût en centimes (BigInt) comme tout montant du système (§1.7) — jamais
+  // de flottant sur de l'argent.
+  coutHTG           BigInt        @default(0)
+  // Kilométrage relevé au moment de l'entretien, pour suivre l'usure réelle
+  // indépendamment du compteur courant du véhicule.
+  kilometrage       Int?
+  dateEntretien     DateTime      @default(now())
+  prochainEntretien DateTime?
+  createdBy         String?
+  createdAt         DateTime      @default(now())
+
+  @@index([vehiculeId, dateEntretien])
 }
 
 model ToiletteMobile {

@@ -30,6 +30,7 @@ const I = {
   factures: "M14 3v5h5M8 13h8M8 17h5M6 3h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z",
   devis: "M9 12h6m-6 4h4M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 5h6",
   catalogue: "M4 6h16M4 12h16M4 18h16M2.5 6h.01M2.5 12h.01M2.5 18h.01",
+  flotte: "M3 12h13l3 4h2v3h-2M3 12V7a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v5M3 12v7h2M7.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
 };
 
 const LIENS_ADMIN: Lien[] = [
@@ -40,6 +41,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/interventions", label: "Interventions", icone: <Icone d={I.interventions} /> },
   { href: "/admin/terrain", label: "Terrain", icone: <Icone d={I.terrain} /> },
   { href: "/admin/techniciens", label: "Techniciens", icone: <Icone d={I.techniciens} /> },
+  { href: "/admin/vehicules", label: "Flotte", icone: <Icone d={I.flotte} /> },
   { href: "/admin/factures", label: "Facturation", icone: <Icone d={I.factures} /> },
   { href: "/admin/devis", label: "Devis", icone: <Icone d={I.devis} /> },
   { href: "/admin/catalogue", label: "Catalogue", icone: <Icone d={I.catalogue} /> },

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { statsFactures } from "@/lib/services/factures";
+import { statsFlotte } from "@/lib/services/vehicules";
 
 function compterParStatut<T extends string>(
   lignes: { statut: T; _count: number }[]
@@ -58,7 +59,7 @@ export async function statsPilotage(params: { dateDebut?: Date; dateFin?: Date }
     finance,
     serieMensuelle,
     interventionsParStatutBrut,
-    vehiculesParStatutBrut,
+    flotte,
     techniciens,
     demandesNonTraitees,
     devisParStatutBrut,
@@ -71,11 +72,7 @@ export async function statsPilotage(params: { dateDebut?: Date; dateFin?: Date }
       where: { deletedAt: null },
       _count: true,
     }),
-    prisma.vehicule.groupBy({
-      by: ["statut"],
-      where: { deletedAt: null },
-      _count: true,
-    }),
+    statsFlotte(),
     prisma.technicien.findMany({ where: { deletedAt: null }, select: { disponible: true } }),
     prisma.demandeDevis.count({ where: { traite: false } }),
     prisma.devis.groupBy({
@@ -87,7 +84,6 @@ export async function statsPilotage(params: { dateDebut?: Date; dateFin?: Date }
   ]);
 
   const interventionsParStatut = compterParStatut(interventionsParStatutBrut);
-  const vehiculesParStatut = compterParStatut(vehiculesParStatutBrut);
   const devisParStatut = compterParStatut(devisParStatutBrut);
 
   const totalDevisEmis = Object.entries(devisParStatut)
@@ -107,10 +103,10 @@ export async function statsPilotage(params: { dateDebut?: Date; dateFin?: Date }
       total: Object.values(interventionsParStatut).reduce((s, n) => s + n, 0),
     },
     vehicules: {
-      parStatut: vehiculesParStatut,
-      disponibles: vehiculesParStatut.DISPONIBLE ?? 0,
-      enMaintenance: vehiculesParStatut.EN_MAINTENANCE ?? 0,
-      total: Object.values(vehiculesParStatut).reduce((s, n) => s + n, 0),
+      parStatut: flotte.parStatut,
+      disponibles: flotte.disponibles,
+      enMaintenance: flotte.enMaintenance,
+      total: flotte.total,
     },
     techniciens: {
       disponibles: techniciens.filter((t) => t.disponible).length,
@@ -127,7 +123,8 @@ export async function statsPilotage(params: { dateDebut?: Date; dateFin?: Date }
     alertes: {
       facturesEnRetard,
       demandesNonTraitees,
-      vehiculesEnMaintenance: vehiculesParStatut.EN_MAINTENANCE ?? 0,
+      vehiculesEnMaintenance: flotte.enMaintenance,
+      entretiensDus: flotte.entretiensDus.length,
     },
   };
 }

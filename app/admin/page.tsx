@@ -119,9 +119,14 @@ export default async function AdminHomePage() {
       classe: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
     },
     stats.alertes.vehiculesEnMaintenance > 0 && {
-      href: "/admin/interventions",
+      href: "/admin/vehicules",
       texte: `${stats.alertes.vehiculesEnMaintenance} véhicule(s) en maintenance`,
       classe: "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200",
+    },
+    stats.alertes.entretiensDus > 0 && {
+      href: "/admin/vehicules",
+      texte: `${stats.alertes.entretiensDus} entretien(s) à prévoir`,
+      classe: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
     },
   ].filter(Boolean) as { href: string; texte: string; classe: string }[];
 
@@ -143,7 +148,9 @@ export default async function AdminHomePage() {
         <div className="flex flex-wrap gap-3">
           {alertes.map((a) => (
             <Link
-              key={a.href}
+              // Le texte, pas le href : deux alertes de flotte pointent toutes
+              // deux vers /admin/vehicules et se seraient partagé la même clé.
+              key={a.texte}
               href={a.href}
               className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition ${a.classe}`}
             >

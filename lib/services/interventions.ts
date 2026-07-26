@@ -4,6 +4,7 @@ import { ErreurMetier } from "@/lib/errors";
 import { transitionValide } from "@/lib/interventions/statut";
 import { debutJourLocal, finJourLocal } from "@/lib/dates";
 import { scopeInterventions } from "@/lib/auth/rbac";
+import { STATUTS_VEHICULE_INDISPONIBLE } from "@/lib/services/vehicules";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { Role, StatutIntervention } from "@/app/generated/prisma/enums";
 import type {
@@ -64,6 +65,23 @@ export async function creerIntervention(input: CreerInterventionInput) {
       where: { id: input.contratId, deletedAt: null, clientId: input.clientId },
     });
     if (!contrat) throw new ErreurMetier("Contrat introuvable pour ce client", 400);
+  }
+
+  // La contrainte d'exclusion (§1.3) empêche de réserver deux fois le même
+  // véhicule sur un créneau qui se chevauche, mais elle ignore complètement
+  // son statut : sans ce contrôle, on pouvait planifier une intervention sur
+  // un camion à l'atelier ou hors service.
+  if (input.vehiculeId) {
+    const vehicule = await prisma.vehicule.findFirst({
+      where: { id: input.vehiculeId, deletedAt: null },
+    });
+    if (!vehicule) throw new ErreurMetier("Véhicule introuvable", 400);
+    if (STATUTS_VEHICULE_INDISPONIBLE.includes(vehicule.statut)) {
+      throw new ErreurMetier(
+        `Le véhicule ${vehicule.immatriculation} est ${vehicule.statut === "EN_MAINTENANCE" ? "en maintenance" : "hors service"} et ne peut pas être affecté`,
+        409
+      );
+    }
   }
 
   const reference = await referenceIntervention();

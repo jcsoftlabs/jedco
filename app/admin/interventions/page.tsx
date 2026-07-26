@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { listerInterventions } from "@/lib/services/interventions";
 import { listerClients } from "@/lib/services/clients";
 import { listerTechniciens } from "@/lib/services/techniciens";
 import { prisma } from "@/lib/db";
 import NouvelleInterventionForm from "./NouvelleInterventionForm";
-import NouveauVehiculeForm from "./NouveauVehiculeForm";
 import InterventionsTable from "./InterventionsTable";
 
 export default async function InterventionsPage() {
@@ -35,7 +35,12 @@ export default async function InterventionsPage() {
             disponible: t.disponible,
           }))}
         />
-        <NouveauVehiculeForm />
+        <Link
+          href="/admin/vehicules"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+        >
+          Gérer la flotte
+        </Link>
       </div>
 
       <InterventionsTable
