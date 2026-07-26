@@ -105,22 +105,17 @@ export default function InterventionTerrainCard({
         {intervention.description && <p className="italic text-slate-500">{intervention.description}</p>}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {TRANSITIONS[statut]?.map((suivant) => (
-          <button
-            key={suivant}
-            disabled={envoi}
-            onClick={() => changerStatut(suivant)}
-            className="text-xs rounded border border-slate-300 px-2 py-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-          >
-            → {suivant}
-          </button>
-        ))}
+      {/* Boutons ≥44px de haut et action principale pleine largeur en
+          premier — un technicien utilise cet écran dehors, souvent d'une
+          seule main et parfois avec des gants ; des puces text-xs de 30px
+          (mesuré : la version précédente) sont trop petites pour un pouce
+          et obligent une seconde main pour viser précisément. */}
+      <div className="mt-4 space-y-2">
         {statut === "EN_COURS" && (
           <button
             disabled={envoi}
             onClick={() => setRapportOuvert(true)}
-            className="text-xs rounded bg-jedco px-3 py-1.5 font-semibold text-white hover:bg-jedco-light transition disabled:opacity-50"
+            className="w-full rounded-lg bg-jedco px-4 py-3 text-sm font-semibold text-white hover:bg-jedco-light transition disabled:opacity-50"
           >
             Terminer + rapport
           </button>
@@ -129,10 +124,24 @@ export default function InterventionTerrainCard({
           <button
             disabled={envoi}
             onClick={() => setRapportOuvert(true)}
-            className="text-xs rounded border border-slate-300 px-2 py-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            className="w-full rounded-lg border border-jedco px-4 py-3 text-sm font-semibold text-jedco hover:bg-jedco/5 disabled:opacity-50"
           >
             Ajouter un rapport
           </button>
+        )}
+        {(TRANSITIONS[statut]?.length ?? 0) > 0 && (
+          <div className="flex gap-2">
+            {TRANSITIONS[statut].map((suivant) => (
+              <button
+                key={suivant}
+                disabled={envoi}
+                onClick={() => changerStatut(suivant)}
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-3 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+              >
+                → {suivant}
+              </button>
+            ))}
+          </div>
         )}
       </div>
       {erreur && <p className="mt-2 text-xs text-red-600">{erreur}</p>}

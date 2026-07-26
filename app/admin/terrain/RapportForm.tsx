@@ -184,18 +184,21 @@ export default function RapportForm({
         {etapeEnvoi && <p className="text-sm text-jedco">{etapeEnvoi}</p>}
         {erreur && <p className="text-sm text-red-600">{erreur}</p>}
 
-        <div className="flex gap-2">
+        {/* Empilés et pleine largeur plutôt que côte à côte : mêmes
+            contraintes tactiles que InterventionTerrainCard.tsx (usage
+            terrain, une main, parfois avec des gants). */}
+        <div className="space-y-2">
           <button
             type="submit"
             disabled={envoi}
-            className="rounded-lg bg-jedco px-4 py-2 text-sm font-semibold text-white hover:bg-jedco-light transition disabled:opacity-60"
+            className="w-full rounded-lg bg-jedco px-4 py-3 text-sm font-semibold text-white hover:bg-jedco-light transition disabled:opacity-60"
           >
             {envoi ? "Envoi…" : marquerTermineApres ? "Enregistrer et terminer" : "Enregistrer le rapport"}
           </button>
           <button
             type="button"
             onClick={onFermer}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
           >
             Annuler
           </button>
