@@ -30,7 +30,12 @@ describe("génération PDF de devis (intégration réelle)", () => {
 
   beforeAll(async () => {
     const client = await prisma.client.create({
-      data: { code: `TEST-PDF-DEV-${Date.now()}`, nom: "Client PDF Devis", telephone: "0000" },
+      data: {
+        code: `TEST-PDF-DEV-${Date.now()}`,
+        nom: "Client PDF Devis",
+        telephone: "0000",
+        email: "client-pdf-devis-test@example.com",
+      },
     });
     clientId = client.id;
 
@@ -73,6 +78,14 @@ describe("génération PDF de devis (intégration réelle)", () => {
     expect(texte).toContain("Client PDF Devis");
     expect(texte).toContain("Valable jusqu");
     expect(texte).not.toContain("PAIEMENTS REÇUS");
+  });
+
+  it("affiche l'e-mail du client quand il est renseigné", async () => {
+    const devis = await obtenirDevis(devisId);
+    const pdf = await genererDevisPDF(devis!);
+    const texte = texteVisibleDuPDF(pdf);
+
+    expect(texte).toContain("client-pdf-devis-test@example.com");
   });
 
   it("affiche les montants sans caractère parasite dans le séparateur de milliers", async () => {

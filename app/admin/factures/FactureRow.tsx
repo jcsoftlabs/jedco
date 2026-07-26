@@ -26,7 +26,7 @@ export default function FactureRow({
     statut: string;
     totalHTG: string;
     dateEcheance: string;
-    client: { nom: string };
+    client: { nom: string; email: string | null };
     paiements: { montantHTG: string }[];
   };
 }) {
@@ -149,6 +149,7 @@ export default function FactureRow({
         <FacturePreviewModal
           factureId={facture.id}
           reference={facture.reference}
+          clientEmail={facture.client.email}
           onFermer={() => setApercuOuvert(false)}
         />
       )}

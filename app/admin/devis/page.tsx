@@ -66,7 +66,7 @@ export default async function DevisPage({
                   statut: d.statut,
                   totalHTG: d.totalHTG.toString(),
                   dateValidite: d.dateValidite.toISOString(),
-                  client: { nom: d.client.nom },
+                  client: { nom: d.client.nom, email: d.client.email },
                 }}
               />
             ))}

@@ -297,9 +297,16 @@ function dessinerBlocsInfo(
   });
   const adresse = [opts.client.adresse, opts.client.ville].filter(Boolean).join(", ");
   if (adresse) doc.text(adresse, MARGE + 12, doc.y, { width: largeurGauche - 24 });
-  if (opts.client.telephone) {
-    doc.text(`Tél : ${opts.client.telephone}`, MARGE + 12, doc.y, { width: largeurGauche - 24 });
-  }
+  // Téléphone et e-mail sur une seule ligne — le bloc a une hauteur fixe
+  // (hauteurBloc) pour s'aligner avec le bloc des dates à droite, pas de
+  // place pour une ligne de plus si les deux coordonnées sont renseignées.
+  const contact = [
+    opts.client.telephone ? `Tél : ${opts.client.telephone}` : null,
+    opts.client.email,
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
+  if (contact) doc.text(contact, MARGE + 12, doc.y, { width: largeurGauche - 24 });
 
   doc.roundedRect(xDroite, yBlocs, largeurDroite, hauteurBloc, 4).fill(GRIS_FOND);
 

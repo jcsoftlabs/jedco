@@ -27,7 +27,7 @@ export default function DevisRow({
     statut: string;
     totalHTG: string;
     dateValidite: string;
-    client: { nom: string };
+    client: { nom: string; email: string | null };
   };
 }) {
   const router = useRouter();
@@ -143,6 +143,7 @@ export default function DevisRow({
         <DevisPreviewModal
           devisId={devis.id}
           reference={devis.reference}
+          clientEmail={devis.client.email}
           onFermer={() => setApercuOuvert(false)}
         />
       )}

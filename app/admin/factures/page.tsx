@@ -84,7 +84,7 @@ export default async function FacturesPage({
                   statut: f.statut,
                   totalHTG: f.totalHTG.toString(),
                   dateEcheance: f.dateEcheance.toISOString(),
-                  client: { nom: f.client.nom },
+                  client: { nom: f.client.nom, email: f.client.email },
                   paiements: f.paiements.map((p) => ({ montantHTG: p.montantHTG.toString() })),
                 }}
               />

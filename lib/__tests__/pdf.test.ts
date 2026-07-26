@@ -32,7 +32,12 @@ describe("génération PDF de facture (intégration réelle)", () => {
 
   beforeAll(async () => {
     const client = await prisma.client.create({
-      data: { code: `TEST-PDF-${Date.now()}`, nom: "Client PDF Test", telephone: "0000" },
+      data: {
+        code: `TEST-PDF-${Date.now()}`,
+        nom: "Client PDF Test",
+        telephone: "0000",
+        email: "client-pdf-test@example.com",
+      },
     });
     clientId = client.id;
 
@@ -89,6 +94,14 @@ describe("génération PDF de facture (intégration réelle)", () => {
     expect(texte).toContain(facture!.reference);
     expect(texte).toContain("Client PDF Test");
     expect(texte).toContain("Vidange fosse septique");
+  });
+
+  it("affiche l'e-mail du client quand il est renseigné", async () => {
+    const facture = await obtenirFacture(factureId);
+    const pdf = await genererFacturePDF(facture!);
+    const texte = texteVisibleDuPDF(pdf);
+
+    expect(texte).toContain("client-pdf-test@example.com");
   });
 
   it("tient sur une seule page", async () => {

@@ -19,6 +19,19 @@ const schema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET_NAME: z.string().optional(),
   R2_PUBLIC_URL: z.union([z.url(), z.literal("")]).optional(),
+
+  // Envoi de factures/devis par e-mail via Resend. RESEND_ENVOI_ACTIF est un
+  // interrupteur séparé de la présence de la clé API : le domaine d'envoi
+  // n'est pas encore vérifié côté Resend, donc le code est écrit et
+  // branché mais désactivé par défaut (défaut "false") jusqu'à ce que ce
+  // soit fait — évite d'avoir à retirer du code plus tard, juste à changer
+  // la variable d'environnement.
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional(),
+  RESEND_ENVOI_ACTIF: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 // Validé une seule fois au premier import — importer ce module tôt (ex. dans

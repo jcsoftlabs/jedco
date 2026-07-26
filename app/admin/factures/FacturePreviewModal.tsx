@@ -1,19 +1,23 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 export default function FacturePreviewModal({
   factureId,
   reference,
+  clientEmail,
   onFermer,
 }: {
   factureId: string;
   reference: string;
+  clientEmail: string | null;
   onFermer: () => void;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const urlPdf = `/api/factures/${factureId}/pdf`;
+  const [envoi, setEnvoi] = useState(false);
+  const [messageEnvoi, setMessageEnvoi] = useState<{ texte: string; erreur: boolean } | null>(null);
 
   function imprimer() {
     // Le PDF est affiché via le lecteur natif du navigateur dans l'iframe
@@ -21,6 +25,20 @@ export default function FacturePreviewModal({
     // directement plutôt que de renvoyer l'utilisateur vers le sélecteur de
     // fichier du navigateur.
     iframeRef.current?.contentWindow?.print();
+  }
+
+  async function envoyerParEmail() {
+    setEnvoi(true);
+    setMessageEnvoi(null);
+    try {
+      const res = await fetch(`/api/factures/${factureId}/envoyer-email`, { method: "POST" });
+      const data = await res.json();
+      setMessageEnvoi({ texte: data.message ?? data.error ?? "Erreur", erreur: !data.success });
+    } catch {
+      setMessageEnvoi({ texte: "Connexion impossible.", erreur: true });
+    } finally {
+      setEnvoi(false);
+    }
   }
 
   // Portail vers document.body : ce composant est rendu depuis FactureRow,
@@ -40,6 +58,16 @@ export default function FacturePreviewModal({
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <h3 className="font-semibold text-jedco-dark">Facture {reference}</h3>
           <div className="flex items-center gap-2">
+            {clientEmail && (
+              <button
+                onClick={envoyerParEmail}
+                disabled={envoi}
+                title={`Envoyer à ${clientEmail}`}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+              >
+                {envoi ? "Envoi…" : "Envoyer par e-mail"}
+              </button>
+            )}
             <button
               onClick={imprimer}
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
@@ -62,6 +90,13 @@ export default function FacturePreviewModal({
             </button>
           </div>
         </div>
+        {messageEnvoi && (
+          <p
+            className={`px-5 pt-2 text-sm ${messageEnvoi.erreur ? "text-red-600" : "text-emerald-600"}`}
+          >
+            {messageEnvoi.texte}
+          </p>
+        )}
         <iframe ref={iframeRef} src={urlPdf} title={`Facture ${reference}`} className="flex-1 rounded-b-lg" />
       </div>
     </div>,
