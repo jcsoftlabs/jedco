@@ -76,8 +76,8 @@ describe("génération PDF de facture (intégration réelle)", () => {
     // slash PRÉCÉDÉ d'une espace — les slashs de date (« 25/07/2026 ») n'en
     // ont pas et ne doivent pas déclencher cette assertion.
     expect(texte).not.toMatch(/\d\s+\/\d/);
-    // Sous-total attendu : 25 000 + 2×1 500 = 28 000 HTG, séparateur U+00A0.
-    expect(texte).toContain("28 000,00 HTG");
+    // Sous-total attendu : 25 000 + 2×1 500 = 28 000 HTG, séparateur ASCII.
+    expect(texte).toContain("28 000,00 HTG");
   });
 
   it("affiche les mentions légales et l'identité du client", async () => {
@@ -89,5 +89,26 @@ describe("génération PDF de facture (intégration réelle)", () => {
     expect(texte).toContain(facture!.reference);
     expect(texte).toContain("Client PDF Test");
     expect(texte).toContain("Vidange fosse septique");
+  });
+
+  it("tient sur une seule page", async () => {
+    const facture = await obtenirFacture(factureId);
+    const pdf = await genererFacturePDF(facture!);
+
+    // Régression : le pied de page dépassait la marge basse, ce qui poussait
+    // pdfkit à ajouter automatiquement une seconde page vierge — imprimée pour
+    // rien à chaque facture.
+    const count = /\/Count\s+(\d+)/.exec(pdf.toString("latin1"));
+    expect(count?.[1]).toBe("1");
+  });
+
+  it("intègre le logo de l'entreprise", async () => {
+    const facture = await obtenirFacture(factureId);
+    const pdf = await genererFacturePDF(facture!);
+
+    // Une image intégrée déclare un XObject de sous-type /Image. Sans logo,
+    // genererFacturePDF retombe silencieusement sur un en-tête typographique —
+    // ce test garantit qu'on s'en aperçoit.
+    expect(pdf.toString("latin1")).toMatch(/\/Subtype\s*\/Image/);
   });
 });

@@ -51,72 +51,87 @@ export type ResultatFacturationRecurrente = {
 //   2. La contrainte unique (contratId, periode) déjà en base (migration
 //      Phase 0) reste le filet de sécurité final si le verrou échouait pour
 //      une raison quelconque (ex: connexion perdue en cours d'exécution).
+//
+// Le verrou est pris avec pg_try_advisory_xact_lock (portée transaction) et
+// non pg_try_advisory_lock (portée session) : DATABASE_URL pointe vers
+// PgBouncer en mode transaction, où deux requêtes successives du même client
+// peuvent atterrir sur deux connexions différentes. Un verrou de session
+// serait alors acquis sur une connexion et libéré — ou pas — sur une autre.
+// Un verrou de transaction reste par construction sur la connexion de la
+// transaction et se libère automatiquement au commit, y compris si le
+// processus meurt en cours de route.
 export async function genererFacturesRecurrentes(
   maintenant: Date = new Date()
 ): Promise<ResultatFacturationRecurrente> {
   const periode = periodeCourante(maintenant);
   const cleVerrou = `facturation-recurrente:${periode}`;
 
-  const [{ verrouObtenu }] = await prisma.$queryRaw<{ verrouObtenu: boolean }[]>`
-    SELECT pg_try_advisory_lock(hashtext(${cleVerrou})) AS "verrouObtenu"
-  `;
+  return prisma.$transaction(
+    async (tx) => {
+      const [{ verrouObtenu }] = await tx.$queryRaw<{ verrouObtenu: boolean }[]>`
+        SELECT pg_try_advisory_xact_lock(hashtext(${cleVerrou})) AS "verrouObtenu"
+      `;
 
-  if (!verrouObtenu) {
-    return { periode, genere: 0, ignore: true };
-  }
+      if (!verrouObtenu) {
+        return { periode, genere: 0, ignore: true };
+      }
 
-  try {
-    const contratsActifs = await prisma.contrat.findMany({
-      where: {
-        statut: "ACTIF",
-        deletedAt: null,
-        type: { in: ["MENSUEL", "TRIMESTRIEL", "ANNUEL"] },
-        dateDebut: { lte: maintenant },
-        dateFin: { gte: maintenant },
-      },
-    });
-
-    const contratsEligibles = contratsActifs.filter((c) => doitEtreFacturePourCeMois(c, maintenant));
-
-    let genere = 0;
-    for (const contrat of contratsEligibles) {
-      const dejaFacture = await prisma.facture.findUnique({
-        where: { contratId_periode: { contratId: contrat.id, periode } },
-      });
-      if (dejaFacture) continue;
-
-      const reference = await referenceFacture();
-      const tauxUsdApplique = await tauxUsdCourantEncode();
-
-      await prisma.facture.create({
-        data: {
-          reference,
-          clientId: contrat.clientId,
-          contratId: contrat.id,
-          periode,
-          montantHTG: contrat.montantHTG,
-          taxeHTG: 0n,
-          totalHTG: contrat.montantHTG,
-          tauxUsdApplique,
-          dateEcheance: new Date(maintenant.getTime() + 30 * 86_400_000),
-          lignes: {
-            create: [
-              {
-                description: `Facturation ${contrat.type.toLowerCase()} — contrat ${contrat.reference} (${periode})`,
-                quantite: 1,
-                prixUnitaireHTG: contrat.montantHTG,
-                totalHTG: contrat.montantHTG,
-                ordre: 0,
-              },
-            ],
-          },
+      const contratsActifs = await tx.contrat.findMany({
+        where: {
+          statut: "ACTIF",
+          deletedAt: null,
+          type: { in: ["MENSUEL", "TRIMESTRIEL", "ANNUEL"] },
+          dateDebut: { lte: maintenant },
+          dateFin: { gte: maintenant },
         },
       });
-      genere++;
-    }
 
-    return { periode, genere, ignore: false };
-  } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(hashtext(${cleVerrou}))`;
-  }
+      const contratsEligibles = contratsActifs.filter((c) =>
+        doitEtreFacturePourCeMois(c, maintenant)
+      );
+
+      let genere = 0;
+      for (const contrat of contratsEligibles) {
+        const dejaFacture = await tx.facture.findUnique({
+          where: { contratId_periode: { contratId: contrat.id, periode } },
+        });
+        if (dejaFacture) continue;
+
+        const reference = await referenceFacture();
+        const tauxUsdApplique = await tauxUsdCourantEncode();
+
+        await tx.facture.create({
+          data: {
+            reference,
+            clientId: contrat.clientId,
+            contratId: contrat.id,
+            periode,
+            montantHTG: contrat.montantHTG,
+            taxeHTG: 0n,
+            totalHTG: contrat.montantHTG,
+            tauxUsdApplique,
+            dateEcheance: new Date(maintenant.getTime() + 30 * 86_400_000),
+            lignes: {
+              create: [
+                {
+                  description: `Facturation ${contrat.type.toLowerCase()} — contrat ${contrat.reference} (${periode})`,
+                  quantite: 1,
+                  prixUnitaireHTG: contrat.montantHTG,
+                  totalHTG: contrat.montantHTG,
+                  ordre: 0,
+                },
+              ],
+            },
+          },
+        });
+        genere++;
+      }
+
+      return { periode, genere, ignore: false };
+    },
+    // Le lot mensuel parcourt tous les contrats actifs : le délai par défaut
+    // de Prisma (5 s) est insuffisant dès quelques dizaines de contrats, avec
+    // en prime la latence réseau vers Railway.
+    { timeout: 120_000, maxWait: 20_000 }
+  );
 }

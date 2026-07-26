@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { Client } from "pg";
 import { prisma } from "@/lib/db";
 import { referenceContrat } from "@/lib/codes";
 import { genererFacturesRecurrentes } from "../facturation-recurrente";
@@ -120,28 +121,54 @@ describe("facturation récurrente des contrats sous verrou (§1.9, intégration 
     expect(factures).toHaveLength(1);
   });
 
-  it("refuse la double génération sous concurrence réelle — une seule exécution obtient le verrou", async () => {
+  it("se retire sans rien faire quand le verrou de période est déjà détenu", async () => {
     const contrat = await nouveauContrat({ type: "MENSUEL", dateDebut: new Date("2027-01-01") });
     const maintenant = new Date("2027-07-15T12:00:00Z");
 
-    // Deux "déclenchements du cron" strictement simultanés pour le même mois.
-    const [resultatA, resultatB] = await Promise.all([
+    // Détient le verrou depuis une connexion indépendante, puis appelle la
+    // génération. Test déterministe de la propriété d'exclusion elle-même : ne
+    // dépend d'aucun entrelacement de timing, contrairement à un simple
+    // Promise.all où les deux appels peuvent se succéder sans se recouvrir.
+    const detenteur = new Client({ connectionString: process.env.DIRECT_URL });
+    await detenteur.connect();
+    try {
+      const { rows } = await detenteur.query(
+        "SELECT pg_try_advisory_lock(hashtext($1)) AS obtenu",
+        ["facturation-recurrente:2027-07"]
+      );
+      expect(rows[0].obtenu).toBe(true);
+
+      const resultat = await genererFacturesRecurrentes(maintenant);
+      expect(resultat.ignore).toBe(true);
+      expect(resultat.genere).toBe(0);
+
+      const factures = await prisma.facture.findMany({
+        where: { contratId: contrat.id, periode: "2027-07" },
+      });
+      expect(factures).toHaveLength(0);
+    } finally {
+      await detenteur.query("SELECT pg_advisory_unlock(hashtext($1))", [
+        "facturation-recurrente:2027-07",
+      ]);
+      await detenteur.end();
+    }
+  });
+
+  it("ne crée jamais qu'une facture par contrat et par période, même en appels simultanés", async () => {
+    const contrat = await nouveauContrat({ type: "MENSUEL", dateDebut: new Date("2027-01-01") });
+    const maintenant = new Date("2027-08-15T12:00:00Z");
+
+    // Invariant métier, indépendant du timing : que les deux exécutions se
+    // recouvrent réellement ou se succèdent, le résultat visible doit être le
+    // même — une seule facture. Le verrou évite le travail redondant, la
+    // contrainte unique (contratId, periode) garantit le résultat.
+    await Promise.all([
       genererFacturesRecurrentes(maintenant),
       genererFacturesRecurrentes(maintenant),
     ]);
 
-    const ignores = [resultatA, resultatB].filter((r) => r.ignore);
-    const executes = [resultatA, resultatB].filter((r) => !r.ignore);
-
-    // L'une des deux exécutions doit avoir été écartée par le verrou.
-    expect(ignores.length).toBeGreaterThanOrEqual(1);
-    expect(executes.length).toBeGreaterThanOrEqual(1);
-
-    // Quoi qu'il en soit, une seule facture existe pour ce contrat sur cette
-    // période — la contrainte unique (contratId, periode) est le filet de
-    // sécurité final, mais le verrou a évité tout travail redondant.
     const factures = await prisma.facture.findMany({
-      where: { contratId: contrat.id, periode: "2027-07" },
+      where: { contratId: contrat.id, periode: "2027-08" },
     });
     expect(factures).toHaveLength(1);
   });
