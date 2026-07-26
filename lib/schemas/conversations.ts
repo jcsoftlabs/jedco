@@ -8,6 +8,7 @@ export const messageChatSchema = z.object({
   // "Nouveau visiteur" sans coordonnées.
   nom: z.string().trim().min(1).max(200).optional(),
   telephone: z.string().trim().min(1).max(30).optional(),
+  email: z.email().optional(),
 });
 
 export const repondreConversationSchema = z.object({

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ChatProvider } from "./components/ChatContext";
 import ChatWidgetGate from "./components/ChatWidgetGate";
 import FadeUpObserver from "./components/FadeUpObserver";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -12,7 +14,39 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "JEDCO Services S.A. — Assainissement Professionnel en Haïti",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — Assainissement Professionnel en Haïti`,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "assainissement Haïti",
+    "vidange fosse septique",
+    "collecte d'ordures Haïti",
+    "toilettes mobiles",
+    "pest control Haïti",
+    "nettoyage industriel",
+    "JEDCO",
+    "Port-au-Prince",
+  ],
+  authors: [{ name: SITE_NAME }],
+  robots: { index: true, follow: true },
+  alternates: { canonical: "/" },
+  icons: { icon: "/jedco-logo.png", apple: "/jedco-logo.png" },
+  openGraph: {
+    type: "website",
+    locale: "fr_HT",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — Assainissement Professionnel en Haïti`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — Assainissement Professionnel en Haïti`,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ChatWidgetGate />
         </ChatProvider>
         <FadeUpObserver />
+        <Analytics />
       </body>
     </html>
   );

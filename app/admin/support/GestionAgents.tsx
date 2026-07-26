@@ -58,10 +58,8 @@ export default function GestionAgents() {
   }
 
   return (
-    <details className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <summary className="cursor-pointer text-sm font-semibold text-jedco-dark">
-        Agents support ({agents.length})
-      </summary>
+    <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h3 className="text-sm font-semibold text-jedco-dark">Agents support ({agents.length})</h3>
 
       <div className="mt-3 space-y-2">
         {agents.map((a) => (
@@ -141,6 +139,6 @@ export default function GestionAgents() {
           </div>
         </form>
       )}
-    </details>
+    </div>
   );
 }

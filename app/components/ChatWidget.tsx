@@ -29,6 +29,8 @@ export default function ChatWidget() {
   const [infosCollectees, setInfosCollectees] = useState(true);
   const [nomVisiteur, setNomVisiteur] = useState("");
   const [telephoneVisiteur, setTelephoneVisiteur] = useState("");
+  const [emailVisiteur, setEmailVisiteur] = useState("");
+  const [erreurInfos, setErreurInfos] = useState<string | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionIdRef = useRef<string | null>(null);
@@ -94,6 +96,11 @@ export default function ChatWidget() {
 
   function handleSubmitInfos(e: React.FormEvent) {
     e.preventDefault();
+    if (!telephoneVisiteur.trim() && !emailVisiteur.trim()) {
+      setErreurInfos("Indiquez au moins un moyen de vous joindre : téléphone ou e-mail.");
+      return;
+    }
+    setErreurInfos(null);
     localStorage.setItem(CLE_INFOS, "1");
     setInfosCollectees(true);
     setTimeout(() => inputRef.current?.focus(), 30);
@@ -116,6 +123,7 @@ export default function ChatWidget() {
           message: text,
           nom: nomVisiteur.trim() || undefined,
           telephone: telephoneVisiteur.trim() || undefined,
+          email: emailVisiteur.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -224,7 +232,6 @@ export default function ChatWidget() {
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-600">Votre téléphone</label>
                   <input
-                    required
                     type="tel"
                     value={telephoneVisiteur}
                     onChange={(e) => setTelephoneVisiteur(e.target.value)}
@@ -232,6 +239,18 @@ export default function ChatWidget() {
                     className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30"
                   />
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Votre e-mail</label>
+                  <input
+                    type="email"
+                    value={emailVisiteur}
+                    onChange={(e) => setEmailVisiteur(e.target.value)}
+                    placeholder="Ex : jean@example.com"
+                    className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-jedco focus:ring-1 focus:ring-jedco/30"
+                  />
+                </div>
+                <p className="text-xs text-slate-400">Téléphone ou e-mail : au moins l&apos;un des deux.</p>
+                {erreurInfos && <p className="text-xs text-red-600">{erreurInfos}</p>}
                 <button type="submit" className="w-full rounded-lg bg-jedco px-5 py-2.5 text-sm font-semibold text-white hover:bg-jedco-light transition">
                   Continuer
                 </button>

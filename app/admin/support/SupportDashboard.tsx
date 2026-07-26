@@ -11,6 +11,7 @@ type Conversation = {
   agentId: string | null;
   nom: string | null;
   telephone: string | null;
+  email: string | null;
   updatedAt: string;
   messages: Message[];
 };
@@ -235,6 +236,11 @@ export default function SupportDashboard() {
                 {conversationOuverte.telephone && (
                   <a href={`tel:${conversationOuverte.telephone}`} className="text-xs text-jedco hover:underline">
                     {conversationOuverte.telephone}
+                  </a>
+                )}
+                {conversationOuverte.email && (
+                  <a href={`mailto:${conversationOuverte.email}`} className="text-xs text-jedco hover:underline">
+                    {conversationOuverte.email}
                   </a>
                 )}
               </div>

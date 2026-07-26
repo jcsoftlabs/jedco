@@ -16,9 +16,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-        <a href="#" className="flex items-center gap-3">
-          <Image src="/jedco-logo.png" alt="JEDCO" width={40} height={40} className="h-10 w-auto" />
-          <span className="text-lg font-bold text-jedco hidden sm:inline">JEDCO Services S.A.</span>
+        <a href="#" className="flex items-center">
+          <Image src="/jedco-logo.png" alt="JEDCO Services S.A." width={56} height={56} className="h-14 w-auto" />
         </a>
         <div className="flex items-center gap-3">
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">

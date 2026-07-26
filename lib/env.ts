@@ -37,6 +37,11 @@ const schema = z.object({
   // du lead (voir lib/services/notifications.ts) — mieux vaut un lead sans
   // notification qu'un lead perdu parce que l'e-mail interne échoue.
   NOTIFICATIONS_EMAIL: z.string().optional(),
+
+  // URL publique du site, pour metadataBase/OpenGraph/sitemap (lib/seo.ts).
+  // Le domaine définitif (jedco.ht au plan initial) n'est pas encore
+  // configuré — à renseigner dès qu'il l'est, sans toucher au code.
+  NEXT_PUBLIC_SITE_URL: z.url().optional(),
 });
 
 // Validé une seule fois au premier import — importer ce module tôt (ex. dans

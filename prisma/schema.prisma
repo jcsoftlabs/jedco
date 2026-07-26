@@ -623,6 +623,7 @@ model Conversation {
   agent     User?                @relation(fields: [agentId], references: [id])
   nom       String?
   telephone String?
+  email     String?
   messages  MessageConversation[]
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt

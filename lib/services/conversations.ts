@@ -15,15 +15,18 @@ const INCLUDE_MESSAGES = {
 
 export async function obtenirOuCreerConversation(
   sessionId: string,
-  infos?: { nom?: string; telephone?: string }
+  infos?: { nom?: string; telephone?: string; email?: string }
 ) {
   return prisma.conversation.upsert({
     where: { sessionId },
-    create: { sessionId, nom: infos?.nom, telephone: infos?.telephone },
+    create: { sessionId, nom: infos?.nom, telephone: infos?.telephone, email: infos?.email },
     // Uniquement si fourni : le sondage GET du widget appelle cette même
-    // fonction sans infos à chaque poll, ça ne doit jamais effacer un nom
-    // déjà enregistré.
-    update: infos?.nom || infos?.telephone ? { nom: infos?.nom, telephone: infos?.telephone } : {},
+    // fonction sans infos à chaque poll, ça ne doit jamais effacer des
+    // coordonnées déjà enregistrées.
+    update:
+      infos?.nom || infos?.telephone || infos?.email
+        ? { nom: infos?.nom, telephone: infos?.telephone, email: infos?.email }
+        : {},
     include: INCLUDE_MESSAGES,
   });
 }
@@ -84,7 +87,7 @@ async function appellerIA(message: string): Promise<string> {
 export async function traiterMessageVisiteur(
   sessionId: string,
   message: string,
-  infos?: { nom?: string; telephone?: string }
+  infos?: { nom?: string; telephone?: string; email?: string }
 ) {
   const conversation = await obtenirOuCreerConversation(sessionId, infos);
 

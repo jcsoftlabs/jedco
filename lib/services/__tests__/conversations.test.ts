@@ -187,4 +187,16 @@ describe("module Conversations — Tiffany hybride IA/humain (intégration réel
     const deuxiemeLecture = await obtenirOuCreerConversation(sessionId);
     expect(deuxiemeLecture.nom).toBe("Wislande Étienne");
   });
+
+  it("enregistre aussi l'e-mail du visiteur", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: {} }) }));
+    const sessionId = `test-session-${Date.now()}-k`;
+
+    await traiterMessageVisiteur(sessionId, "Bonjour", { telephone: "3712-3456", email: "visiteur@example.com" });
+    const conversation = await obtenirOuCreerConversation(sessionId);
+    idsConversations.push(conversation.id);
+
+    expect(conversation.telephone).toBe("3712-3456");
+    expect(conversation.email).toBe("visiteur@example.com");
+  });
 });

@@ -7,8 +7,8 @@ import { traiterMessageVisiteur, obtenirOuCreerConversation } from "@/lib/servic
 // /api/public/demandes-devis) — sessionId généré et conservé côté client
 // (localStorage), jamais un identifiant de compte.
 export const POST = routeApi(async (req) => {
-  const { sessionId, message, nom, telephone } = messageChatSchema.parse(await req.json());
-  const resultat = await traiterMessageVisiteur(sessionId, message, { nom, telephone });
+  const { sessionId, message, nom, telephone, email } = messageChatSchema.parse(await req.json());
+  const resultat = await traiterMessageVisiteur(sessionId, message, { nom, telephone, email });
   return reponseOk(resultat);
 });
 
