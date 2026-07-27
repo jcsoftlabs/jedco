@@ -33,7 +33,9 @@ export const metadata: Metadata = {
   authors: [{ name: SITE_NAME }],
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
-  icons: { icon: "/jedco-logo.png", apple: "/jedco-logo.png" },
+  // Pas de champ `icons` ici : app/icon.png, app/apple-icon.png et
+  // app/favicon.ico (convention App Router) sont détectés automatiquement.
+  // Un `icons` explicite dans les métadonnées désactiverait cette détection.
   openGraph: {
     type: "website",
     locale: "fr_HT",
