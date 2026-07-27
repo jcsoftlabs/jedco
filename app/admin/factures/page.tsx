@@ -13,7 +13,14 @@ import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 export default async function FacturesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string; page?: string; q?: string; statut?: string }>;
+  searchParams: Promise<{
+    clientId?: string;
+    page?: string;
+    q?: string;
+    statut?: string;
+    dateDebut?: string;
+    dateFin?: string;
+  }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -24,12 +31,20 @@ export default async function FacturesPage({
     throw e;
   }
 
-  const { clientId, page: pageParam, q, statut } = await searchParams;
+  const { clientId, page: pageParam, q, statut, dateDebut: dateDebutParam, dateFin: dateFinParam } =
+    await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const statutValide = statutFactureSchema.safeParse(statut).data;
+  // new Date("2026-13-40") produit un objet Invalid Date plutôt que de lever
+  // — on vérifie explicitement avant de l'envoyer au filtre Prisma, sinon une
+  // date saisie à la main dans l'URL casserait silencieusement le filtrage.
+  const dateDebut =
+    dateDebutParam && !Number.isNaN(new Date(dateDebutParam).getTime()) ? new Date(dateDebutParam) : undefined;
+  const dateFin =
+    dateFinParam && !Number.isNaN(new Date(dateFinParam).getTime()) ? new Date(dateFinParam) : undefined;
 
   const [{ data: factures, meta }, clients, stats, catalogue] = await Promise.all([
-    listerFactures({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }),
+    listerFactures({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide, dateDebut, dateFin }),
     listerClientsPourSelection(),
     totauxFactures(),
     listerCatalogue({ actif: true }),
@@ -92,7 +107,7 @@ export default async function FacturesPage({
           limit={meta.limit}
           total={meta.total}
           basePath="/admin/factures"
-          searchParams={{ clientId, q, statut }}
+          searchParams={{ clientId, q, statut, dateDebut: dateDebutParam, dateFin: dateFinParam }}
         />
       </div>
     </div>

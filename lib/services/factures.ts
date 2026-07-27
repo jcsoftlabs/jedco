@@ -39,16 +39,22 @@ async function construireWhereFactures(
     idsRecherche = lignes.map((l) => l.id);
   }
 
+  // dateFin arrive à minuit (ex : 2026-07-31T00:00:00) — un `lte` brut
+  // exclurait donc toutes les factures émises ce jour-là après minuit. On
+  // pousse la borne à la fin de journée pour que "au 31 juillet" inclue
+  // réellement le 31 juillet.
+  const finDeJournee = dateFin ? new Date(dateFin.getTime() + 24 * 60 * 60 * 1000 - 1) : undefined;
+
   return {
     deletedAt: null,
     ...(clientId ? { clientId } : {}),
     ...(statut ? { statut } : {}),
     ...(idsRecherche ? { id: { in: idsRecherche } } : {}),
-    ...(dateDebut || dateFin
+    ...(dateDebut || finDeJournee
       ? {
           dateEmission: {
             ...(dateDebut ? { gte: dateDebut } : {}),
-            ...(dateFin ? { lte: dateFin } : {}),
+            ...(finDeJournee ? { lte: finDeJournee } : {}),
           },
         }
       : {}),

@@ -3,6 +3,7 @@
 import RechercheServeur from "../RechercheServeur";
 import FactureRow from "./FactureRow";
 import ExporterCsvLien from "./ExporterCsvLien";
+import PlageDates from "./PlageDates";
 
 type Facture = {
   id: string;
@@ -45,6 +46,7 @@ export default function FacturesTable({
             }}
           />
         </div>
+        <PlageDates />
         <ExporterCsvLien />
       </div>
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">

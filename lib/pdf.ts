@@ -102,6 +102,17 @@ function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
 }
 
+// Pour une date-only venant d'un filtre d'URL (ex : "2026-02-01", interprétée
+// par le navigateur comme minuit UTC) : formatDate() ci-dessus utilise le
+// fuseau du serveur et afficherait la veille si celui-ci est en retard sur
+// UTC. Les composants UTC de la date évitent ce décalage — la borne d'un
+// intervalle représente un jour civil entier, pas un instant précis.
+function formatDateUTC(date: Date): string {
+  const jour = String(date.getUTCDate()).padStart(2, "0");
+  const mois = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${jour}/${mois}/${date.getUTCFullYear()}`;
+}
+
 // Intl.NumberFormat("fr-FR") sépare les milliers avec une espace insécable
 // fine (U+202F) — typographiquement correct en français et rendu correctement
 // en HTML, mais que pdfkit encode en « / » avec les polices standard, donnant
@@ -563,7 +574,7 @@ export async function genererRapportComptablePDF(
     doc.font("Helvetica").fontSize(9).fillColor(GRIS_DOUX);
     const periodeTexte =
       periode.dateDebut || periode.dateFin
-        ? `Période : ${periode.dateDebut ? formatDate(periode.dateDebut) : "…"} → ${periode.dateFin ? formatDate(periode.dateFin) : "…"}`
+        ? `Période : ${periode.dateDebut ? formatDateUTC(periode.dateDebut) : "…"} - ${periode.dateFin ? formatDateUTC(periode.dateFin) : "…"}`
         : "Période : toutes les factures";
     doc.text(periodeTexte, MARGE_PAYSAGE, MARGE_PAYSAGE + 24);
     doc.text(`Généré le ${formatDate(new Date())} — ${lignes.length} facture(s)`, MARGE_PAYSAGE, doc.y);

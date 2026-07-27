@@ -2,17 +2,21 @@
 
 import { useSearchParams } from "next/navigation";
 
-// Reprend les filtres actifs de la page (recherche, statut) pour que l'export
-// corresponde exactement à ce que l'admin voit à l'écran — un export
-// "tout" quand une recherche est active serait trompeur.
+// Reprend les filtres actifs de la page (recherche, statut, intervalle de
+// dates) pour que l'export corresponde exactement à ce que l'admin voit à
+// l'écran — un export "tout" quand un filtre est actif serait trompeur.
 export default function ExporterCsvLien() {
   const searchParams = useSearchParams();
 
   const params = new URLSearchParams();
   const q = searchParams.get("q");
   const statut = searchParams.get("statut");
+  const dateDebut = searchParams.get("dateDebut");
+  const dateFin = searchParams.get("dateFin");
   if (q) params.set("search", q);
   if (statut) params.set("statut", statut);
+  if (dateDebut) params.set("dateDebut", dateDebut);
+  if (dateFin) params.set("dateFin", dateFin);
 
   return (
     <div className="flex gap-2">
