@@ -8,6 +8,7 @@ import {
   supprimerClient,
   listerClients,
   statsClient,
+  listerVillesClients,
 } from "../clients";
 
 describe("module Clients (intégration réelle)", () => {
@@ -182,5 +183,121 @@ describe("module Clients (intégration réelle)", () => {
 
   it("statsClient renvoie null pour un client introuvable", async () => {
     expect(await statsClient("id-qui-nexiste-pas")).toBeNull();
+  });
+
+  describe("segmentation (zone, service, statut de paiement)", () => {
+    const suffix = Date.now();
+    let clientImpaye: string;
+    let clientEnRegle: string;
+    let clientVidange: string;
+
+    afterAll(async () => {
+      await prisma.facture.deleteMany({ where: { clientId: { in: [clientImpaye, clientEnRegle, clientVidange] } } });
+      await prisma.contrat.deleteMany({ where: { clientId: clientVidange } });
+    });
+
+    it("prépare trois clients : deux à Jacmel (un impayé, un en règle), un aux Cayes avec un contrat Vidange actif", async () => {
+      const jacmelImpaye = await creerClient({
+        nom: `Segment Jacmel Impayé ${suffix}`,
+        type: "PARTICULIER",
+        telephone: "0000",
+        ville: "Jacmel",
+      });
+      clientImpaye = jacmelImpaye.id;
+      idsCrees.push(clientImpaye);
+
+      const jacmelRegle = await creerClient({
+        nom: `Segment Jacmel Réglé ${suffix}`,
+        type: "PARTICULIER",
+        telephone: "0000",
+        ville: "Jacmel",
+      });
+      clientEnRegle = jacmelRegle.id;
+      idsCrees.push(clientEnRegle);
+
+      const cayesVidange = await creerClient({
+        nom: `Segment Cayes Vidange ${suffix}`,
+        type: "PARTICULIER",
+        telephone: "0000",
+        ville: "Les Cayes",
+      });
+      clientVidange = cayesVidange.id;
+      idsCrees.push(clientVidange);
+
+      await prisma.facture.create({
+        data: {
+          reference: `TEST-SEGMENT-FAC-${suffix}`,
+          clientId: clientImpaye,
+          montantHTG: 1000n,
+          totalHTG: 1000n,
+          statut: "EN_ATTENTE",
+          dateEcheance: new Date(Date.now() + 30 * 86_400_000),
+        },
+      });
+
+      await prisma.contrat.create({
+        data: {
+          reference: `TEST-SEGMENT-CTR-${suffix}`,
+          clientId: clientVidange,
+          type: "MENSUEL",
+          services: ["VIDANGE"],
+          montantHTG: 1000n,
+          dateDebut: new Date(Date.now() - 10 * 86_400_000),
+          dateFin: new Date(Date.now() + 300 * 86_400_000),
+          statut: "ACTIF",
+        },
+      });
+    });
+
+    it("filtre par zone", async () => {
+      const { data } = await listerClients({ page: 1, limit: 100, ville: "Jacmel" });
+      const noms = data.map((c) => c.id);
+      expect(noms).toContain(clientImpaye);
+      expect(noms).toContain(clientEnRegle);
+      expect(noms).not.toContain(clientVidange);
+    });
+
+    it("filtre par statut de paiement IMPAYE", async () => {
+      const { data } = await listerClients({ page: 1, limit: 100, statutPaiement: "IMPAYE" });
+      const ids = data.map((c) => c.id);
+      expect(ids).toContain(clientImpaye);
+      expect(ids).not.toContain(clientEnRegle);
+    });
+
+    it("filtre par statut de paiement EN_REGLE", async () => {
+      const { data } = await listerClients({ page: 1, limit: 100, statutPaiement: "EN_REGLE" });
+      const ids = data.map((c) => c.id);
+      expect(ids).toContain(clientEnRegle);
+      expect(ids).toContain(clientVidange);
+      expect(ids).not.toContain(clientImpaye);
+    });
+
+    it("filtre par service consommé via un contrat actif", async () => {
+      const { data } = await listerClients({ page: 1, limit: 100, service: "VIDANGE" });
+      const ids = data.map((c) => c.id);
+      expect(ids).toContain(clientVidange);
+      expect(ids).not.toContain(clientImpaye);
+      expect(ids).not.toContain(clientEnRegle);
+    });
+
+    it("combine plusieurs filtres à la fois (ET logique)", async () => {
+      const { data } = await listerClients({
+        page: 1,
+        limit: 100,
+        ville: "Jacmel",
+        statutPaiement: "IMPAYE",
+      });
+      const ids = data.map((c) => c.id);
+      expect(ids).toContain(clientImpaye);
+      expect(ids).not.toContain(clientEnRegle);
+    });
+
+    it("listerVillesClients renvoie des zones distinctes triées, sans doublon", async () => {
+      const villes = await listerVillesClients();
+      expect(villes).toContain("Jacmel");
+      expect(villes).toContain("Les Cayes");
+      expect(new Set(villes).size).toBe(villes.length);
+      expect(villes).toEqual([...villes].sort());
+    });
   });
 });

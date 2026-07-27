@@ -13,21 +13,51 @@ type Client = {
   email: string | null;
 };
 
-export default function ClientsTable({ clients }: { clients: Client[] }) {
+type TypeService = { code: string; libelle: string };
+
+export default function ClientsTable({
+  clients,
+  villes = [],
+  typesService = [],
+}: {
+  clients: Client[];
+  villes?: string[];
+  typesService?: TypeService[];
+}) {
   return (
     <div>
       <RechercheServeur
         placeholder="Rechercher un client (nom, code, ville, téléphone, e-mail…)"
-        filtre={{
-          label: "Type",
-          param: "type",
-          options: [
-            { valeur: "PARTICULIER", label: "Particulier" },
-            { valeur: "ENTREPRISE", label: "Entreprise" },
-            { valeur: "INSTITUTION", label: "Institution" },
-            { valeur: "ONG", label: "ONG" },
-          ],
-        }}
+        filtres={[
+          {
+            label: "Type",
+            param: "type",
+            options: [
+              { valeur: "PARTICULIER", label: "Particulier" },
+              { valeur: "ENTREPRISE", label: "Entreprise" },
+              { valeur: "INSTITUTION", label: "Institution" },
+              { valeur: "ONG", label: "ONG" },
+            ],
+          },
+          {
+            label: "Zone",
+            param: "ville",
+            options: villes.map((v) => ({ valeur: v, label: v })),
+          },
+          {
+            label: "Service",
+            param: "service",
+            options: typesService.map((t) => ({ valeur: t.code, label: t.libelle })),
+          },
+          {
+            label: "Paiement",
+            param: "statutPaiement",
+            options: [
+              { valeur: "IMPAYE", label: "Impayé" },
+              { valeur: "EN_REGLE", label: "En règle" },
+            ],
+          },
+        ]}
       />
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-sm">

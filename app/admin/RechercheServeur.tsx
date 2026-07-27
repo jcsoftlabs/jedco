@@ -4,24 +4,35 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 export type OptionFiltre = { valeur: string; label: string };
+export type DefinitionFiltre = { label: string; param: string; options: OptionFiltre[] };
 
-// Équivalent de TableauFiltrable, mais la recherche et le filtre pilotent
-// l'URL (searchParams `q` et `param`) au lieu d'un état local : le serveur
-// refait la requête sur TOUTE la table, pas seulement la page déjà chargée
-// dans le navigateur (voir listerClients/listerFactures/… pour la recherche
-// SQL elle-même). Un changement remet toujours la pagination à la page 1.
+// Équivalent de TableauFiltrable, mais la recherche et le(s) filtre(s)
+// pilotent l'URL (searchParams `q` et un paramètre par filtre) au lieu d'un
+// état local : le serveur refait la requête sur TOUTE la table, pas
+// seulement la page déjà chargée dans le navigateur (voir
+// listerClients/listerFactures/… pour la recherche SQL elle-même). Un
+// changement remet toujours la pagination à la page 1.
 export default function RechercheServeur({
   placeholder,
   filtre,
+  filtres,
 }: {
   placeholder: string;
-  filtre?: { label: string; param: string; options: OptionFiltre[] };
+  // Un seul menu déroulant — la forme d'origine, conservée pour les pages
+  // qui n'ont besoin que d'un filtre (Factures, Devis, Interventions…).
+  filtre?: DefinitionFiltre;
+  // Plusieurs menus déroulants côte à côte — pour une page comme Clients qui
+  // segmente sur plusieurs axes à la fois (zone, type de service, statut de
+  // paiement). `filtre` et `filtres` sont fusionnés si les deux sont fournis.
+  filtres?: DefinitionFiltre[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [q, setQ] = useState(searchParams.get("q") ?? "");
+
+  const tousLesFiltres: DefinitionFiltre[] = [...(filtre ? [filtre] : []), ...(filtres ?? [])];
 
   // Le debounce évite une requête serveur à chaque frappe — 300ms est
   // imperceptible pour l'admin mais épargne la base sur une saisie rapide.
@@ -39,15 +50,16 @@ export default function RechercheServeur({
     return () => clearTimeout(minuteur);
   }, [q]);
 
-  function changerFiltre(valeur: string) {
+  function changerFiltre(param: string, valeur: string) {
     const params = new URLSearchParams(searchParams.toString());
-    if (valeur) params.set(filtre!.param, valeur);
-    else params.delete(filtre!.param);
+    if (valeur) params.set(param, valeur);
+    else params.delete(param);
     params.delete("page");
     router.replace(`${pathname}?${params.toString()}`);
   }
 
-  const filtreActif = filtre ? (searchParams.get(filtre.param) ?? "") : "";
+  const valeursActives = tousLesFiltres.map((f) => searchParams.get(f.param) ?? "");
+  const auMoinsUnFiltreActif = valeursActives.some(Boolean);
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -72,28 +84,29 @@ export default function RechercheServeur({
         />
       </div>
 
-      {filtre && (
+      {tousLesFiltres.map((f) => (
         <select
-          value={filtreActif}
-          onChange={(e) => changerFiltre(e.target.value)}
+          key={f.param}
+          value={searchParams.get(f.param) ?? ""}
+          onChange={(e) => changerFiltre(f.param, e.target.value)}
           className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-jedco"
         >
-          <option value="">{filtre.label} : tous</option>
-          {filtre.options.map((o) => (
+          <option value="">{f.label} : tous</option>
+          {f.options.map((o) => (
             <option key={o.valeur} value={o.valeur}>
               {o.label}
             </option>
           ))}
         </select>
-      )}
+      ))}
 
-      {(q || filtreActif) && (
+      {(q || auMoinsUnFiltreActif) && (
         <button
           onClick={() => {
             setQ("");
             const params = new URLSearchParams(searchParams.toString());
             params.delete("q");
-            if (filtre) params.delete(filtre.param);
+            for (const f of tousLesFiltres) params.delete(f.param);
             params.delete("page");
             router.replace(`${pathname}?${params.toString()}`);
           }}

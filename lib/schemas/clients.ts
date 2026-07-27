@@ -1,6 +1,19 @@
 import { z } from "zod";
+import { typeServiceSchema } from "@/lib/schemas/enums";
 
 export const typeClientSchema = z.enum(["PARTICULIER", "ENTREPRISE", "INSTITUTION", "ONG"]);
+
+// EN_REGLE / IMPAYE plutôt que de recopier StatutFacture ici : la
+// segmentation raisonne sur "ce client a-t-il quelque chose à payer en ce
+// moment", pas sur le statut précis d'une facture donnée — un client avec
+// une facture EN_ATTENTE et une autre EN_RETARD est IMPAYE des deux façons,
+// on n'a pas besoin de les distinguer à ce niveau.
+export const statutPaiementClientSchema = z.enum(["EN_REGLE", "IMPAYE"]);
+// Statuts qui rendent un client "IMPAYE" pour cette segmentation — mêmes
+// valeurs que statutsImpayes dans statsClient (lib/services/clients.ts),
+// gardées ici pour que le filtre de liste et le calcul par fiche parlent
+// toujours de la même chose.
+export const STATUTS_FACTURE_IMPAYES = ["EN_ATTENTE", "PARTIELLEMENT_PAYEE", "EN_RETARD"] as const;
 
 export const creerClientSchema = z.object({
   nom: z.string().trim().min(1).max(200),
@@ -37,6 +50,10 @@ export const listeClientsSchema = z.object({
     .enum(["true", "false"])
     .transform((v) => v === "true")
     .optional(),
+  // Segmente sur le service consommé, pas sur le type de client — un
+  // client rattaché à un contrat actif dont les `services` incluent ce code.
+  service: typeServiceSchema.optional(),
+  statutPaiement: statutPaiementClientSchema.optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

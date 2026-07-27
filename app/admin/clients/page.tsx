@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { requireRole, ErreurAcces } from "@/lib/auth/rbac";
-import { listerClients } from "@/lib/services/clients";
-import { typeClientSchema } from "@/lib/schemas/clients";
+import { listerClients, listerVillesClients } from "@/lib/services/clients";
+import { listerTypesService } from "@/lib/services/types-reference";
+import { typeClientSchema, statutPaiementClientSchema } from "@/lib/schemas/clients";
+import { typeServiceSchema } from "@/lib/schemas/enums";
 import NouveauClientForm from "./NouveauClientForm";
 import ClientsTable from "./ClientsTable";
 import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
@@ -10,7 +12,14 @@ import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; type?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    q?: string;
+    type?: string;
+    ville?: string;
+    service?: string;
+    statutPaiement?: string;
+  }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -21,16 +30,25 @@ export default async function ClientsPage({
     throw e;
   }
 
-  const { page: pageParam, q, type } = await searchParams;
+  const { page: pageParam, q, type, ville, service, statutPaiement } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const typeValide = typeClientSchema.safeParse(type).data;
+  const serviceValide = typeServiceSchema.safeParse(service).data;
+  const statutPaiementValide = statutPaiementClientSchema.safeParse(statutPaiement).data;
 
-  const { data: clients, meta } = await listerClients({
-    page,
-    limit: TAILLE_PAGE_DEFAUT,
-    search: q,
-    type: typeValide,
-  });
+  const [{ data: clients, meta }, villes, typesService] = await Promise.all([
+    listerClients({
+      page,
+      limit: TAILLE_PAGE_DEFAUT,
+      search: q,
+      type: typeValide,
+      ville: ville || undefined,
+      service: serviceValide,
+      statutPaiement: statutPaiementValide,
+    }),
+    listerVillesClients(),
+    listerTypesService(),
+  ]);
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -48,6 +66,8 @@ export default async function ClientsPage({
           telephone: c.telephone,
           email: c.email,
         }))}
+        villes={villes}
+        typesService={typesService.map((t) => ({ code: t.code, libelle: t.libelle }))}
       />
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
         <Pager
@@ -55,7 +75,7 @@ export default async function ClientsPage({
           limit={meta.limit}
           total={meta.total}
           basePath="/admin/clients"
-          searchParams={{ q, type }}
+          searchParams={{ q, type, ville, service, statutPaiement }}
         />
       </div>
     </div>

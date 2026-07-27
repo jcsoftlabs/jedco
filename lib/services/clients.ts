@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/db";
 import { codeClient } from "@/lib/codes";
 import { motifsRecherche } from "@/lib/services/recherche";
+import { STATUTS_FACTURE_IMPAYES } from "@/lib/schemas/clients";
 import type { Prisma } from "@/app/generated/prisma/client";
-import type { StatutFacture } from "@/app/generated/prisma/enums";
 import type { CreerClientInput, ListeClientsParams, ModifierClientInput } from "@/lib/schemas/clients";
 
 export async function listerClients(params: ListeClientsParams) {
-  const { page, limit, ville, type, actif, search } = params;
+  const { page, limit, ville, type, actif, service, statutPaiement, search } = params;
 
   // Recherche insensible à la casse ET aux accents, tous les mots doivent
   // matcher (comme TableauFiltrable côté client) — mais ici sur TOUTE la
@@ -31,6 +31,16 @@ export async function listerClients(params: ListeClientsParams) {
     ...(ville ? { ville } : {}),
     ...(type ? { type } : {}),
     ...(actif !== undefined ? { actif } : {}),
+    // Contrat ACTIF plutôt que "n'importe quel contrat passé" : la
+    // segmentation répond à "qui consomme ce service en ce moment", pas à
+    // "qui l'a déjà consommé un jour" — un contrat résilié ou expiré ne
+    // qualifie plus le client pour ce filtre.
+    ...(service ? { contrats: { some: { deletedAt: null, statut: "ACTIF", services: { has: service } } } } : {}),
+    ...(statutPaiement === "IMPAYE"
+      ? { factures: { some: { deletedAt: null, statut: { in: [...STATUTS_FACTURE_IMPAYES] } } } }
+      : statutPaiement === "EN_REGLE"
+        ? { factures: { none: { deletedAt: null, statut: { in: [...STATUTS_FACTURE_IMPAYES] } } } }
+        : {}),
     ...(idsRecherche ? { id: { in: idsRecherche } } : {}),
   };
 
@@ -77,9 +87,8 @@ export async function statsClient(id: string) {
     }),
   ]);
 
-  const statutsImpayes: StatutFacture[] = ["EN_ATTENTE", "PARTIELLEMENT_PAYEE", "EN_RETARD"];
   const montantDuHTG = factures
-    .filter((f) => statutsImpayes.includes(f.statut))
+    .filter((f) => (STATUTS_FACTURE_IMPAYES as readonly string[]).includes(f.statut))
     .reduce((total, f) => total + f.totalHTG, 0n);
 
   return {
@@ -87,6 +96,20 @@ export async function statsClient(id: string) {
     totalFactures: factures.length,
     montantDuHTG,
   };
+}
+
+// Villes distinctes des clients actifs, pour peupler le menu déroulant
+// "Zone" de la segmentation — plutôt qu'une liste figée à l'avance qui
+// dériverait des vraies zones desservies dès qu'un client d'une nouvelle
+// ville est ajouté.
+export async function listerVillesClients(): Promise<string[]> {
+  const lignes = await prisma.client.findMany({
+    where: { deletedAt: null },
+    select: { ville: true },
+    distinct: ["ville"],
+    orderBy: { ville: "asc" },
+  });
+  return lignes.map((l) => l.ville);
 }
 
 export async function creerClient(input: CreerClientInput) {
