@@ -2,10 +2,11 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-// Filtre par intervalle de dates d'émission — pilote l'URL (dateDebut,
-// dateFin) comme RechercheServeur pilote q/statut, pour que la même paire de
-// paramètres serve à la fois à la page (pagination serveur) et aux liens
-// d'export CSV/PDF sans dupliquer la logique de filtrage.
+// Filtre par intervalle de dates — pilote l'URL (dateDebut, dateFin) comme
+// RechercheServeur pilote q/statut, pour que la même paire de paramètres
+// serve à la fois à la page (pagination serveur) et aux liens d'export
+// CSV/PDF sans dupliquer la logique de filtrage. Partagé entre Facturation
+// et Rapports.
 export default function PlageDates() {
   const router = useRouter();
   const pathname = usePathname();

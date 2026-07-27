@@ -641,6 +641,183 @@ export async function genererRapportComptablePDF(
   });
 }
 
+// ─── Rapport d'activité (Reporting & Analytique) ─────────────────────────────
+// Portrait, plusieurs petits tableaux empilés — contrairement à l'export
+// comptable ci-dessus (un seul grand tableau, d'où le paysage), ce rapport
+// combine 4 blocs hétérogènes qui tiennent confortablement en largeur
+// portrait normale.
+
+type ColonneSimple = { label: string; width: number; align?: "left" | "right" };
+type LigneSimple = (string | number)[];
+
+function dessinerSectionTitre(doc: PDFKit.PDFDocument, titre: string, y: number): number {
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(BLEU_SOMBRE).text(titre, MARGE, y);
+  return y + 18;
+}
+
+function dessinerTableSimple(
+  doc: PDFKit.PDFDocument,
+  colonnes: ColonneSimple[],
+  lignes: LigneSimple[],
+  yDepart: number
+): number {
+  let y = yDepart;
+  const largeurTotale = colonnes.reduce((s, c) => s + c.width, 0);
+  const hauteurEntete = 18;
+  const hauteurLigne = 16;
+
+  function xDe(index: number): number {
+    return MARGE + colonnes.slice(0, index).reduce((s, c) => s + c.width, 0);
+  }
+
+  function dessinerEntete() {
+    doc.rect(MARGE, y, largeurTotale, hauteurEntete).fill(BLEU);
+    doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#FFFFFF");
+    colonnes.forEach((c, i) => {
+      doc.text(c.label, xDe(i) + 6, y + 5, { width: c.width - 10, align: c.align ?? "left" });
+    });
+    y += hauteurEntete;
+  }
+
+  dessinerEntete();
+
+  lignes.forEach((ligne, index) => {
+    if (y + hauteurLigne > HAUTEUR_PAGE - MARGE - 40) {
+      doc.addPage({ size: "A4", margin: MARGE });
+      y = MARGE;
+      dessinerEntete();
+    }
+    if (index % 2 === 1) doc.rect(MARGE, y, largeurTotale, hauteurLigne).fill(GRIS_FOND);
+    doc.font("Helvetica").fontSize(8).fillColor(GRIS_TEXTE);
+    ligne.forEach((valeur, i) => {
+      doc.text(String(valeur), xDe(i) + 6, y + 4, {
+        width: colonnes[i].width - 10,
+        align: colonnes[i].align ?? "left",
+        ellipsis: true,
+        height: 11,
+      });
+    });
+    y += hauteurLigne;
+  });
+
+  return y + 16;
+}
+
+export type LigneRapportPerformance = {
+  matricule: string;
+  nom: string;
+  prenom: string;
+  interventionsAssignees: number;
+  interventionsCompletees: number;
+  tauxCompletionPourcent: number | null;
+  joursPresents: number;
+  joursPointes: number;
+};
+
+export type DonneesRapportActivite = {
+  parType: Record<string, number>;
+  parVille: Record<string, number>;
+  performance: LigneRapportPerformance[];
+  occupation: {
+    nombreVehicules: number;
+    joursPeriode: number;
+    joursUtilises: number;
+    joursDisponibles: number;
+    tauxOccupationPourcent: number;
+  };
+};
+
+export async function genererRapportActivitePDF(
+  data: DonneesRapportActivite,
+  periode: { dateDebut?: Date; dateFin?: Date }
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: MARGE, bufferPages: true });
+    const chunks: Buffer[] = [];
+    doc.on("data", (c) => chunks.push(c));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.font("Helvetica-Bold").fontSize(18).fillColor(BLEU_SOMBRE).text("RAPPORT D'ACTIVITÉ", MARGE, MARGE);
+    doc.font("Helvetica").fontSize(9).fillColor(GRIS_DOUX);
+    const periodeTexte =
+      periode.dateDebut || periode.dateFin
+        ? `Période : ${periode.dateDebut ? formatDateUTC(periode.dateDebut) : "…"} - ${periode.dateFin ? formatDateUTC(periode.dateFin) : "…"}`
+        : "Période : toutes les interventions";
+    doc.text(periodeTexte, MARGE, MARGE + 24);
+    doc.text(`Généré le ${formatDate(new Date())}`, MARGE, doc.y);
+
+    let y = MARGE + 58;
+    doc.rect(MARGE, y, LARGEUR_UTILE, 2).fill(BLEU);
+    y += 16;
+
+    y = dessinerSectionTitre(doc, "INTERVENTIONS PAR SERVICE", y);
+    const lignesType = Object.entries(data.parType).sort((a, b) => b[1] - a[1]);
+    y = dessinerTableSimple(
+      doc,
+      [
+        { label: "SERVICE", width: LARGEUR_UTILE * 0.7 },
+        { label: "NOMBRE", width: LARGEUR_UTILE * 0.3, align: "right" },
+      ],
+      lignesType.length > 0 ? lignesType : [["Aucune donnée", 0]],
+      y
+    );
+
+    y = dessinerSectionTitre(doc, "INTERVENTIONS PAR VILLE", y);
+    const lignesVille = Object.entries(data.parVille).sort((a, b) => b[1] - a[1]);
+    y = dessinerTableSimple(
+      doc,
+      [
+        { label: "VILLE", width: LARGEUR_UTILE * 0.7 },
+        { label: "NOMBRE", width: LARGEUR_UTILE * 0.3, align: "right" },
+      ],
+      lignesVille.length > 0 ? lignesVille : [["Aucune donnée", 0]],
+      y
+    );
+
+    y = dessinerSectionTitre(doc, "PERFORMANCE DES ÉQUIPES TERRAIN", y);
+    const colsPerf: ColonneSimple[] = [
+      { label: "TECHNICIEN", width: LARGEUR_UTILE * 0.3 },
+      { label: "MATRICULE", width: LARGEUR_UTILE * 0.14 },
+      { label: "ASSIGNÉES", width: LARGEUR_UTILE * 0.14, align: "right" },
+      { label: "COMPLÉTÉES", width: LARGEUR_UTILE * 0.14, align: "right" },
+      { label: "TAUX %", width: LARGEUR_UTILE * 0.12, align: "right" },
+      { label: "PRÉSENCES", width: LARGEUR_UTILE * 0.16, align: "right" },
+    ];
+    const lignesPerf: LigneSimple[] = data.performance.map((p) => [
+      `${p.prenom} ${p.nom}`,
+      p.matricule,
+      p.interventionsAssignees,
+      p.interventionsCompletees,
+      p.tauxCompletionPourcent ?? "—",
+      `${p.joursPresents}/${p.joursPointes}`,
+    ]);
+    y = dessinerTableSimple(
+      doc,
+      colsPerf,
+      lignesPerf.length > 0 ? lignesPerf : [["Aucun technicien actif", "", "", "", "", ""]],
+      y
+    );
+
+    y = dessinerSectionTitre(doc, "OCCUPATION DE LA FLOTTE", y);
+    doc.font("Helvetica").fontSize(9).fillColor(GRIS_TEXTE);
+    doc.text(
+      `${data.occupation.nombreVehicules} véhicule(s) · ${data.occupation.joursPeriode} jour(s) de période · ` +
+        `${data.occupation.joursUtilises} jour-véhicule(s) utilisé(s) sur ${data.occupation.joursDisponibles} disponible(s)`,
+      MARGE,
+      y,
+      { width: LARGEUR_UTILE }
+    );
+    y = doc.y + 10;
+    doc.font("Helvetica-Bold").fontSize(14).fillColor(BLEU);
+    doc.text(`Taux d'occupation : ${data.occupation.tauxOccupationPourcent}%`, MARGE, y);
+
+    dessinerPiedDePage(doc);
+
+    doc.end();
+  });
+}
+
 function dessinerPiedDePage(doc: PDFKit.PDFDocument) {
   // Le bloc entier doit tenir au-dessus de la marge basse : pdfkit ajoute
   // automatiquement une page dès qu'un doc.text() dépasserait cette limite, ce

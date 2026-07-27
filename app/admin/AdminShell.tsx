@@ -50,6 +50,7 @@ const I = {
   journal: "M9 12h6m-6 4h6M9 8h1M4 5.5A2.5 2.5 0 0 1 6.5 3H18a1 1 0 0 1 1 1v15.5a1.5 1.5 0 0 1-1.5 1.5H6.5A2.5 2.5 0 0 1 4 18.5v-13Z",
   presences: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
   toilettes: "M6 21v-8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8M9 3h6l1 4H8l1-4Z",
+  rapports: "M3 3v18h18M7 15l4-4 3 3 5-6",
 };
 
 const LIENS_ADMIN: Lien[] = [
@@ -65,6 +66,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/toilettes", label: "Toilettes mobiles", icone: <Icone d={I.toilettes} /> },
   { href: "/admin/factures", label: "Facturation", icone: <Icone d={I.factures} /> },
   { href: "/admin/devis", label: "Devis", icone: <Icone d={I.devis} /> },
+  { href: "/admin/rapports", label: "Rapports", icone: <Icone d={I.rapports} /> },
   { href: "/admin/catalogue", label: "Catalogue", icone: <Icone d={I.catalogue} /> },
   { href: "/admin/galerie", label: "Galerie", icone: <Icone d={I.galerie} /> },
   { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },

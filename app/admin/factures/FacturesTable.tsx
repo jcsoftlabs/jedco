@@ -3,7 +3,7 @@
 import RechercheServeur from "../RechercheServeur";
 import FactureRow from "./FactureRow";
 import ExporterCsvLien from "./ExporterCsvLien";
-import PlageDates from "./PlageDates";
+import PlageDates from "../PlageDates";
 
 type Facture = {
   id: string;
