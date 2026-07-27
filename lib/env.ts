@@ -38,6 +38,14 @@ const schema = z.object({
   // notification qu'un lead perdu parce que l'e-mail interne échoue.
   NOTIFICATIONS_EMAIL: z.string().optional(),
 
+  // Jeton partagé entre Vercel Cron et /api/cron/taches-quotidiennes. Sur
+  // Vercel, définir la variable suffit : la plateforme l'envoie d'elle-même
+  // dans l'en-tête Authorization du déclenchement programmé. Optionnelle ici
+  // pour ne pas bloquer le démarrage en local, mais la route refuse tout
+  // déclenchement automatique tant qu'elle est absente, plutôt que d'exposer
+  // publiquement un point d'entrée qui écrit des factures.
+  CRON_SECRET: z.string().optional(),
+
   // URL publique du site, pour metadataBase/OpenGraph/sitemap (lib/seo.ts).
   // Le domaine définitif (jedco.ht au plan initial) n'est pas encore
   // configuré — à renseigner dès qu'il l'est, sans toucher au code.

@@ -95,7 +95,35 @@ Dans les paramètres du projet Vercel → Environment Variables :
 | `SESSION_SECRET` | Généré avec `openssl rand -base64 32` — jamais la valeur `dev-only-change-me...` du `.env` local |
 | `ANTHROPIC_API_KEY` | La nouvelle clé de l'étape 1 |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` | Valeurs de l'étape 3 |
+| `CRON_SECRET` | Généré avec `openssl rand -hex 24`. **Obligatoire** : sans elle, les traitements automatiques ne tournent pas (voir §6 bis) |
 | `NODE_ENV` | `production` (Vercel le définit automatiquement) |
+
+---
+
+## 6 bis. Traitements automatiques (Vercel Cron)
+
+`vercel.json` déclare un déclenchement quotidien de
+`/api/cron/taches-quotidiennes` à 06:00 UTC (~01:00 en Haïti). Ce lot fait
+trois choses, toutes indispensables au fonctionnement courant :
+
+1. émettre les factures des contrats récurrents arrivés à échéance ;
+2. passer en `EN_RETARD` les factures dont l'échéance est dépassée ;
+3. clore les contrats arrivés à leur terme.
+
+La route **refuse tout déclenchement** tant que `CRON_SECRET` n'est pas
+définie (503) : c'est une URL qui écrit des factures, elle ne peut pas être
+ouverte au public. Vercel envoie lui-même la variable dans l'en-tête
+`Authorization` — il n'y a rien d'autre à configurer que la variable.
+
+Vérification après déploiement : **Paramètres → Traitements automatiques**
+affiche la date et le détail du dernier passage. Tant qu'on y lit « Le lot
+n'a encore jamais tourné » le lendemain d'un déploiement, la variable est
+absente. Le bouton *Exécuter maintenant* (ADMIN) permet de rattraper une
+nuit manquée ; le lot est rejouable sans effet de bord.
+
+⚠️ Vercel Cron ne s'applique **qu'au déploiement Vercel**. Le déploiement
+Railway, s'il reste actif, n'exécutera rien — raison de plus pour n'en
+garder qu'un seul avant la remise à JEDCO.
 
 ---
 

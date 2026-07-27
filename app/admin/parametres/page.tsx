@@ -8,8 +8,10 @@ import {
   usagesTypeVehicule,
 } from "@/lib/services/types-reference";
 import { obtenirTauxUsd } from "@/lib/services/config";
+import { derniereExecution } from "@/lib/services/taches-planifiees";
 import TauxChangeForm from "./TauxChangeForm";
 import TypesPanel from "./TypesPanel";
+import TachesPanel from "./TachesPanel";
 
 export default async function ParametresPage() {
   const user = await utilisateurCourant();
@@ -21,10 +23,11 @@ export default async function ParametresPage() {
     throw e;
   }
 
-  const [services, vehicules, taux] = await Promise.all([
+  const [services, vehicules, taux, taches] = await Promise.all([
     listerTypesService(),
     listerTypesVehicule(),
     obtenirTauxUsd(),
+    derniereExecution(),
   ]);
 
   // Le nombre d'usages est calculé côté serveur pour que l'admin voie
@@ -46,6 +49,19 @@ export default async function ParametresPage() {
       <TauxChangeForm
         valeurActuelle={taux.valeur}
         misAJourLe={taux.misAJourLe ? taux.misAJourLe.toISOString() : null}
+        estAdmin={user.role === "ADMIN"}
+      />
+
+      <TachesPanel
+        derniereExecution={
+          taches
+            ? {
+                date: taches.date.toISOString(),
+                declencheur: taches.rapport.declencheur,
+                taches: taches.rapport.taches,
+              }
+            : null
+        }
         estAdmin={user.role === "ADMIN"}
       />
 

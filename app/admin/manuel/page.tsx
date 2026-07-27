@@ -10,6 +10,8 @@ import { utilisateurCourant } from "@/lib/auth/current-user";
 const NAV = [
   { href: "#connexion", label: "Se connecter" },
   { href: "#acces", label: "Qui voit quoi" },
+  { href: "#comptes", label: "Mots de passe" },
+  { href: "#automatique", label: "Traitements automatiques" },
   { href: "#admin", label: "Administrateur" },
   { href: "#superviseur", label: "Superviseur" },
   { href: "#technicien", label: "Technicien" },
@@ -277,6 +279,105 @@ export default async function ManuelPage() {
       </Section>
 
       {/* ─── Administrateur ────────────────────────────────────────────── */}
+      {/* ─── Comptes et mots de passe ──────────────────────────────────── */}
+      <Section id="comptes" titre="Mots de passe et comptes">
+        <Carte titre="Changer son propre mot de passe">
+          <p className="max-w-[68ch] text-slate-600">
+            Valable pour <strong>tous les rôles</strong>. Cliquez sur votre nom, en bas du menu de
+            gauche : cela ouvre <Ui>Mon profil</Ui>.
+          </p>
+          <Etapes>
+            <Etape>Saisissez votre mot de passe actuel.</Etape>
+            <Etape>Saisissez le nouveau, deux fois. Minimum 12 caractères.</Etape>
+            <Etape>
+              Validez. Vous restez connecté sur cet appareil ; vos sessions ouvertes ailleurs
+              (téléphone, autre ordinateur) sont fermées.
+            </Etape>
+          </Etapes>
+          <Note type="info" label="Première connexion">
+            <p>
+              Quand un administrateur vous crée un compte ou réinitialise votre mot de passe, il
+              vous en communique un de vive voix. Changez-le ici dès votre première connexion :
+              personne d&apos;autre ne doit connaître celui que vous utilisez.
+            </p>
+          </Note>
+        </Carte>
+
+        <Carte titre="Mot de passe oublié">
+          <p className="max-w-[68ch] text-slate-600">
+            Il n&apos;y a <strong>pas</strong> de récupération par e-mail. La seule voie est un
+            administrateur, depuis <Ui>Utilisateurs</Ui> :
+          </p>
+          <Etapes>
+            <Etape>
+              Ouvrir <Ui>Utilisateurs</Ui>, trouver la personne, cliquer <Ui>Réinitialiser</Ui>.
+            </Etape>
+            <Etape>
+              Le système propose un mot de passe solide. Vous pouvez le remplacer par le vôtre.
+            </Etape>
+            <Etape>
+              Confirmer, puis <strong>noter le mot de passe affiché</strong> : il n&apos;est montré
+              qu&apos;une fois et n&apos;est récupérable nulle part ensuite.
+            </Etape>
+            <Etape>Le communiquer à l&apos;intéressé, qui le changera depuis Mon profil.</Etape>
+          </Etapes>
+          <Note type="attention" label="Effet immédiat">
+            <p>
+              La personne est déconnectée de tous ses appareils. Ne réinitialisez pas le mot de
+              passe de quelqu&apos;un en pleine saisie sans le prévenir.
+            </p>
+          </Note>
+        </Carte>
+
+        <Carte titre="Quelqu'un quitte l'entreprise">
+          <p className="max-w-[68ch] text-slate-600">
+            Dans <Ui>Utilisateurs</Ui>, cliquez <Ui>Désactiver</Ui>. L&apos;accès est coupé
+            immédiatement, mais tout son historique — interventions, factures créées, journal
+            d&apos;activité — reste intact. C&apos;est pour cette raison qu&apos;on désactive au
+            lieu de supprimer. <Ui>Réactiver</Ui> rouvre l&apos;accès si la personne revient.
+          </p>
+          <Note type="info" label="Réservé à l'administrateur">
+            <p>
+              Le menu <Ui>Utilisateurs</Ui> n&apos;apparaît que pour un compte Administrateur. Un
+              superviseur ne peut ni réinitialiser un mot de passe, ni fermer un accès.
+            </p>
+          </Note>
+        </Carte>
+      </Section>
+
+      {/* ─── Traitements automatiques ──────────────────────────────────── */}
+      <Section id="automatique" titre="Ce que le système fait tout seul">
+        <Carte titre="Chaque nuit, sans intervention">
+          <p className="max-w-[68ch] text-slate-600">
+            Trois opérations tournent automatiquement vers 1 h du matin :
+          </p>
+          <Liste>
+            <li>
+              <strong>Facturation des contrats.</strong> Chaque contrat mensuel, trimestriel ou
+              annuel dont l&apos;échéance tombe ce mois-ci reçoit sa facture. Un contrat déjà
+              facturé pour la période est ignoré — jamais de doublon.
+            </li>
+            <li>
+              <strong>Factures en retard.</strong> Toute facture impayée dont la date
+              d&apos;échéance est passée bascule en <Ui>En retard</Ui>. C&apos;est ce qui rend
+              fiable le total <Ui>Impayé</Ui> de la page Facturation.
+            </li>
+            <li>
+              <strong>Contrats terminés.</strong> Un contrat qui atteint sa date de fin passe en{" "}
+              <Ui>Expiré</Ui> et cesse d&apos;être facturé.
+            </li>
+          </Liste>
+          <Note type="info" label="Vérifier que c'est bien passé">
+            <p>
+              <Ui>Paramètres</Ui> → <Ui>Traitements automatiques</Ui> affiche la date du dernier
+              passage et ce que chaque opération a fait. Le bouton <Ui>Exécuter maintenant</Ui>{" "}
+              (administrateur) rattrape une nuit manquée ; le relancer plusieurs fois est sans
+              risque.
+            </p>
+          </Note>
+        </Carte>
+      </Section>
+
       <Section id="admin" titre="Le quotidien de l'administrateur" chip="Administrateur" chipCouleur="#0F2F52">
         <Carte titre="Traiter une demande venue du site public" chemin="Cloche de notification → Demandes">
           <p className="max-w-[68ch] text-slate-600">

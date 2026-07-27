@@ -6,7 +6,17 @@ import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
 import NotificationsCloche from "./NotificationsCloche";
 
-type Lien = { href: string; label: string; icone: React.ReactNode };
+// `adminSeul` : le lien apparaît pour ADMIN mais pas pour SUPERVISEUR, qui
+// partage par ailleurs la même navigation. Sans ce filtre, un superviseur
+// verrait un lien qui le renvoie aussitôt au tableau de bord (la page fait
+// requireRole ADMIN) — un cul-de-sac plutôt qu'une fonctionnalité.
+type Lien = { href: string; label: string; icone: React.ReactNode; adminSeul?: boolean };
+
+// Pages atteignables sans figurer dans la navigation latérale : le titre de
+// l'en-tête les cherche ici, sinon il retomberait sur « Backoffice ».
+const TITRES_HORS_NAV: Record<string, string> = {
+  "/admin/profil": "Mon profil",
+};
 
 const CLE_REPLI = "jedco.sidebar.replie";
 
@@ -35,6 +45,8 @@ const I = {
   flotte: "M3 12h13l3 4h2v3h-2M3 12V7a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v5M3 12v7h2M7.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
   support: "M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 0 1-3.67-.68L3 21l1.87-4.05A7.64 7.64 0 0 1 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z",
   manuel: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z",
+  utilisateurs: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
+  profil: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM6 21v-1a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1",
 };
 
 const LIENS_ADMIN: Lien[] = [
@@ -52,6 +64,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/galerie", label: "Galerie", icone: <Icone d={I.galerie} /> },
   { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },
   { href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> },
+  { href: "/admin/utilisateurs", label: "Utilisateurs", icone: <Icone d={I.utilisateurs} />, adminSeul: true },
   { href: "/admin/parametres", label: "Paramètres", icone: <Icone d={I.parametres} /> },
   { href: "/admin/manuel", label: "Manuel", icone: <Icone d={I.manuel} /> },
 ];
@@ -140,8 +153,9 @@ export default function AdminShell({
     setMobileOuvert(false);
   }, [pathname]);
 
-  const liens =
-    user.role === "TECHNICIEN" ? LIENS_TECHNICIEN : user.role === "SUPPORT" ? LIENS_SUPPORT : LIENS_ADMIN;
+  const liens = (
+    user.role === "TECHNICIEN" ? LIENS_TECHNICIEN : user.role === "SUPPORT" ? LIENS_SUPPORT : LIENS_ADMIN
+  ).filter((l) => !l.adminSeul || user.role === "ADMIN");
   const initiales = `${user.prenom.charAt(0)}${user.nom.charAt(0)}`.toUpperCase();
 
   function estActif(href: string) {
@@ -165,7 +179,17 @@ export default function AdminShell({
 
   const pied = (compact: boolean) => (
     <div className="border-t border-white/10 p-3">
-      <div className={`flex items-center gap-3 ${compact ? "justify-center" : ""}`}>
+      {/* Le bloc identité mène au profil — c'est là que se change son mot de
+          passe. Placé ici plutôt que dans la navigation pour rester accessible
+          à tous les rôles, y compris TECHNICIEN et SUPPORT, dont le menu ne
+          comporte que deux entrées métier. */}
+      <Link
+        href="/admin/profil"
+        title="Mon profil"
+        className={`flex items-center gap-3 rounded-lg p-1 transition hover:bg-white/10 ${
+          compact ? "justify-center" : ""
+        }`}
+      >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-jedco text-xs font-bold text-white">
           {initiales}
         </span>
@@ -177,7 +201,7 @@ export default function AdminShell({
             <p className="text-xs text-slate-400">{user.role}</p>
           </div>
         )}
-      </div>
+      </Link>
       <div className={`mt-3 ${compact ? "flex justify-center" : ""}`}>
         <LogoutButton />
       </div>
@@ -244,7 +268,7 @@ export default function AdminShell({
             </svg>
           </button>
           <h1 className="text-base font-semibold text-jedco-dark">
-            {liens.find((l) => estActif(l.href))?.label ?? "Backoffice"}
+            {liens.find((l) => estActif(l.href))?.label ?? TITRES_HORS_NAV[pathname] ?? "Backoffice"}
           </h1>
           {(user.role === "ADMIN" || user.role === "SUPERVISEUR") && <NotificationsCloche />}
         </header>
