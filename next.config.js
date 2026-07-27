@@ -2,6 +2,15 @@ const path = require("path");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Leaflet (carte de couverture, app/components/CoverageMap.tsx) est une
+  // bibliothèque impérative qui marque son conteneur DOM (_leaflet_id) à
+  // l'initialisation. Le double montage des effets par StrictMode en
+  // développement — utile pour détecter les effets de bord ailleurs dans
+  // l'app — le fait donc échouer avec "Map container is already
+  // initialized". Vérifié empiriquement : erreur uniquement présente avec
+  // reactStrictMode actif, disparaît une fois désactivé. Sans effet en
+  // production, où les effets ne sont de toute façon invoqués qu'une fois.
+  reactStrictMode: false,
   outputFileTracingRoot: path.join(__dirname),
   // pdfkit charge ses fichiers de polices standards (.afm) via fs.readFileSync
   // avec des chemins relatifs résolus à l'exécution. Si Webpack bundle ce code
