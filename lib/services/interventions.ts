@@ -25,7 +25,7 @@ const INCLUDE_STANDARD = {
 } satisfies Prisma.InterventionInclude;
 
 export async function listerInterventions(params: ListeInterventionsParams, user: UtilisateurScope) {
-  const { page, limit, statut, type, ville, technicienId, date, search } = params;
+  const { page, limit, statut, type, ville, technicienId, date, nonFacturees, search } = params;
 
   // Voir listerClients pour le détail de l'approche. Le filtre RBAC
   // (scopeInterventions) reste appliqué normalement ci-dessous : cette
@@ -54,6 +54,11 @@ export async function listerInterventions(params: ListeInterventionsParams, user
     ...(ville ? { ville } : {}),
     ...(technicienId ? { techniciens: { some: { technicienId } } } : {}),
     ...(date ? { datePlanifiee: { gte: debutJourLocal(date), lte: finJourLocal(date) } } : {}),
+    // "Facturée" n'est pas un statut de StatutIntervention (§3.2 du plan
+    // initial ne l'y ajoute pas non plus) — une intervention COMPLETE sans
+    // facture liée reste indiscernable d'une intervention COMPLETE déjà
+    // facturée dans la liste, sans ce filtre calculé sur la relation.
+    ...(nonFacturees ? { statut: "COMPLETE", facture: null } : {}),
     ...(idsRecherche ? { id: { in: idsRecherche } } : {}),
   };
 
@@ -196,6 +201,15 @@ export async function ajouterRapportExecution(
 
 // Interventions du jour groupées par technicien (master prompt 5) — la borne
 // de journée passe par lib/dates.ts (§1.14), jamais un calcul UTC naïf.
+// Compte seul, sans charger les lignes — pour un badge affiché en
+// permanence sur la page (voir app/admin/interventions/page.tsx), qui doit
+// rester bon marché même quand la liste elle-même est paginée.
+export async function compterInterventionsNonFacturees(user: UtilisateurScope): Promise<number> {
+  return prisma.intervention.count({
+    where: { deletedAt: null, ...scopeInterventions(user), statut: "COMPLETE", facture: null },
+  });
+}
+
 export async function planningDuJour(date: Date) {
   const interventions = await prisma.intervention.findMany({
     where: { deletedAt: null, datePlanifiee: { gte: debutJourLocal(date), lte: finJourLocal(date) } },

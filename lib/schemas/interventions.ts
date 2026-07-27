@@ -52,6 +52,12 @@ export const listeInterventionsSchema = z.object({
   ville: z.string().optional(),
   technicienId: z.string().optional(),
   date: z.coerce.date().optional(),
+  // Terminées mais sans facture liée — pas un statut à part entière (voir
+  // lib/services/interventions.ts), un filtre calculé sur ce qui existe déjà.
+  nonFacturees: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

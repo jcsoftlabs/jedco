@@ -10,6 +10,7 @@ import {
   ajouterRapportExecution,
   listerInterventions,
   planningDuJour,
+  compterInterventionsNonFacturees,
   type UtilisateurScope,
 } from "../interventions";
 
@@ -308,5 +309,107 @@ describe("module Interventions (intégration réelle)", () => {
     const planning = await planningDuJour(date);
     expect(planning[technicienId]).toBeDefined();
     expect(planning[technicienId].some((i) => i.id === intervention.id)).toBe(true);
+  });
+
+  describe("filtre nonFacturees — \"Facturé\" n'est pas un statut, c'est calculé", () => {
+    // Timeout étendu : ce test enchaîne une quinzaine d'allers-retours base
+    // (création, transitions de statut, rapport, facture) pour trois
+    // interventions — le défaut de 40s (vitest.config.ts) est parfois trop
+    // court avec la latence réseau vers Railway.
+    it("liste une intervention COMPLETE sans facture, exclut une COMPLETE facturée et une EN_COURS", async () => {
+      const sansFacture = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        dureeEstimeeMin: 60,
+        technicienIds: [],
+      });
+      idsInterventions.push(sansFacture.id);
+      await changerStatutIntervention(sansFacture.id, "PLANIFIE", admin);
+      await changerStatutIntervention(sansFacture.id, "EN_COURS", admin);
+      await ajouterRapportExecution(sansFacture.id, { notes: "fait", photos: [] }, admin);
+      await changerStatutIntervention(sansFacture.id, "COMPLETE", admin);
+
+      const avecFacture = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        dureeEstimeeMin: 60,
+        technicienIds: [],
+      });
+      idsInterventions.push(avecFacture.id);
+      await changerStatutIntervention(avecFacture.id, "PLANIFIE", admin);
+      await changerStatutIntervention(avecFacture.id, "EN_COURS", admin);
+      await ajouterRapportExecution(avecFacture.id, { notes: "fait", photos: [] }, admin);
+      await changerStatutIntervention(avecFacture.id, "COMPLETE", admin);
+      const facture = await prisma.facture.create({
+        data: {
+          reference: `TEST-INT-FAC-${Date.now()}`,
+          clientId,
+          interventionId: avecFacture.id,
+          montantHTG: 1000n,
+          totalHTG: 1000n,
+          statut: "EN_ATTENTE",
+          dateEcheance: new Date(Date.now() + 30 * 86_400_000),
+        },
+      });
+
+      const enCours = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        dureeEstimeeMin: 60,
+        technicienIds: [],
+      });
+      idsInterventions.push(enCours.id);
+      await changerStatutIntervention(enCours.id, "PLANIFIE", admin);
+      await changerStatutIntervention(enCours.id, "EN_COURS", admin);
+
+      try {
+        const { data } = await listerInterventions({ page: 1, limit: 100, nonFacturees: true }, admin);
+        const ids = data.map((i) => i.id);
+        expect(ids).toContain(sansFacture.id);
+        expect(ids).not.toContain(avecFacture.id);
+        expect(ids).not.toContain(enCours.id);
+
+        const compte = await compterInterventionsNonFacturees(admin);
+        expect(compte).toBeGreaterThanOrEqual(1);
+      } finally {
+        await prisma.paiement.deleteMany({ where: { factureId: facture.id } });
+        await prisma.ligneFacture.deleteMany({ where: { factureId: facture.id } });
+        await prisma.facture.delete({ where: { id: facture.id } });
+      }
+    }, 90_000);
+
+    it("compterInterventionsNonFacturees respecte le même périmètre RBAC que listerInterventions", async () => {
+      const intervention = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        dureeEstimeeMin: 60,
+        technicienIds: [technicienId],
+      });
+      idsInterventions.push(intervention.id);
+      await changerStatutIntervention(intervention.id, "PLANIFIE", technicienScope);
+      await changerStatutIntervention(intervention.id, "EN_COURS", technicienScope);
+      await ajouterRapportExecution(intervention.id, { notes: "fait", photos: [] }, technicienScope);
+      await changerStatutIntervention(intervention.id, "COMPLETE", technicienScope);
+
+      // Le technicien assigné la voit, un autre technicien non assigné ne la
+      // voit pas — scopeInterventions (lib/auth/rbac.ts) s'applique ici
+      // exactement comme pour listerInterventions.
+      const compteAssigne = await compterInterventionsNonFacturees(technicienScope);
+      const compteAutre = await compterInterventionsNonFacturees(autreTechnicienScope);
+      expect(compteAssigne).toBeGreaterThanOrEqual(1);
+      expect(compteAutre).toBe(0);
+    });
   });
 });

@@ -20,17 +20,28 @@ export default function InterventionsTable({ interventions }: { interventions: I
     <div>
       <RechercheServeur
         placeholder="Rechercher une intervention (référence, client, ville, véhicule…)"
-        filtre={{
-          label: "Statut",
-          param: "statut",
-          options: [
-            { valeur: "EN_ATTENTE", label: "En attente" },
-            { valeur: "PLANIFIE", label: "Planifiée" },
-            { valeur: "EN_COURS", label: "En cours" },
-            { valeur: "COMPLETE", label: "Terminée" },
-            { valeur: "ANNULE", label: "Annulée" },
-          ],
-        }}
+        filtres={[
+          {
+            label: "Statut",
+            param: "statut",
+            options: [
+              { valeur: "EN_ATTENTE", label: "En attente" },
+              { valeur: "PLANIFIE", label: "Planifiée" },
+              { valeur: "EN_COURS", label: "En cours" },
+              { valeur: "COMPLETE", label: "Terminée" },
+              { valeur: "ANNULE", label: "Annulée" },
+            ],
+          },
+          {
+            // "Facturée" n'est pas un statut — voir le commentaire dans
+            // lib/services/interventions.ts. Ce filtre répond à la question
+            // qu'un statut à lui seul ne peut pas trancher : "qu'est-ce qui
+            // est terminé mais pas encore facturé ?".
+            label: "Facturation",
+            param: "nonFacturees",
+            options: [{ valeur: "true", label: "Terminées non facturées" }],
+          },
+        ]}
       />
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-sm">

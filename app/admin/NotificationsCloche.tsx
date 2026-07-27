@@ -32,6 +32,13 @@ type ContratExpirant = {
   client: { nom: string };
 };
 
+type InterventionNonFacturee = {
+  id: string;
+  reference: string;
+  dateExecution: string | null;
+  client: { nom: string };
+};
+
 export default function NotificationsCloche() {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
@@ -42,6 +49,8 @@ export default function NotificationsCloche() {
   const [totalRdv, setTotalRdv] = useState(0);
   const [contratsExpirants, setContratsExpirants] = useState<ContratExpirant[]>([]);
   const [totalContrats, setTotalContrats] = useState(0);
+  const [nonFacturees, setNonFacturees] = useState<InterventionNonFacturee[]>([]);
+  const [totalNonFacturees, setTotalNonFacturees] = useState(0);
   const conteneurRef = useRef<HTMLDivElement>(null);
 
   async function verifier() {
@@ -93,6 +102,17 @@ export default function NotificationsCloche() {
     } catch {
       // Silencieux, même raison.
     }
+
+    try {
+      const res = await fetch("/api/interventions?nonFacturees=true&page=1&limit=5");
+      const data = await res.json();
+      if (data.success) {
+        setNonFacturees(data.data);
+        setTotalNonFacturees(data.meta?.total ?? data.data.length);
+      }
+    } catch {
+      // Silencieux, même raison.
+    }
   }
 
   useEffect(() => {
@@ -133,11 +153,16 @@ export default function NotificationsCloche() {
     router.push("/admin/contrats");
   }
 
-  // Un seul badge numérique, quatre sources : la cloche répond à « ai-je
+  function ouvrirInterventionNonFacturee() {
+    setOuvert(false);
+    router.push("/admin/interventions?nonFacturees=true");
+  }
+
+  // Un seul badge numérique, cinq sources : la cloche répond à « ai-je
   // quelque chose à traiter ? », pas « combien de types de choses ». Séparer
   // les compteurs en plusieurs badges aurait forcé l'admin à faire l'addition
   // lui-même pour savoir s'il y a urgence.
-  const totalCombine = total + entretiens.length + totalRdv + totalContrats;
+  const totalCombine = total + entretiens.length + totalRdv + totalContrats + totalNonFacturees;
 
   return (
     <div ref={conteneurRef} className="relative ml-auto">
@@ -290,6 +315,43 @@ export default function NotificationsCloche() {
                   className="text-xs font-medium text-jedco hover:underline"
                 >
                   Voir la flotte
+                </Link>
+              </div>
+            </>
+          )}
+
+          {nonFacturees.length > 0 && (
+            <>
+              <div className="flex items-center justify-between border-t border-b border-slate-100 bg-amber-50 px-4 py-2.5">
+                <span className="text-sm font-semibold text-amber-800">Terminées non facturées</span>
+                <span className="text-xs text-amber-600">{totalNonFacturees}</span>
+              </div>
+              <ul className="max-h-60 overflow-y-auto">
+                {nonFacturees.map((i) => (
+                  <li key={i.id}>
+                    <button
+                      onClick={ouvrirInterventionNonFacturee}
+                      className="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                    >
+                      <p className="font-medium text-jedco-dark">
+                        {i.reference} <span className="font-normal text-slate-500">— {i.client.nom}</span>
+                      </p>
+                      {i.dateExecution && (
+                        <p className="text-xs text-slate-500">
+                          Terminée le {new Date(i.dateExecution).toLocaleDateString("fr-FR")}
+                        </p>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-slate-100 px-4 py-2">
+                <Link
+                  href="/admin/interventions?nonFacturees=true"
+                  onClick={() => setOuvert(false)}
+                  className="text-xs font-medium text-jedco hover:underline"
+                >
+                  Voir toutes les interventions non facturées
                 </Link>
               </div>
             </>

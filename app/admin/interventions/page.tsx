@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
-import { listerInterventions } from "@/lib/services/interventions";
+import { listerInterventions, compterInterventionsNonFacturees } from "@/lib/services/interventions";
 import { statutInterventionSchema } from "@/lib/schemas/interventions";
 import { listerClientsPourSelection } from "@/lib/services/clients";
 import { listerTechniciens } from "@/lib/services/techniciens";
@@ -14,7 +14,7 @@ import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 export default async function InterventionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; statut?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; statut?: string; nonFacturees?: string }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -22,17 +22,23 @@ export default async function InterventionsPage({
   // un rôle sans fiche technicien), mais un SUPPORT n'a rien à faire ici.
   if (user.role === "SUPPORT") redirect("/admin/support");
 
-  const { page: pageParam, q, statut } = await searchParams;
+  const { page: pageParam, q, statut, nonFacturees } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const statutValide = statutInterventionSchema.safeParse(statut).data;
+  const nonFactureesValide = nonFacturees === "true" ? true : undefined;
 
-  const [{ data: interventions, meta }, clients, vehicules, techniciens, typesService] = await Promise.all([
-    listerInterventions({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide }, user),
-    listerClientsPourSelection(),
-    prisma.vehicule.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" } }),
-    listerTechniciens(),
-    listerTypesService(true),
-  ]);
+  const [{ data: interventions, meta }, clients, vehicules, techniciens, typesService, nombreNonFacturees] =
+    await Promise.all([
+      listerInterventions(
+        { page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide, nonFacturees: nonFactureesValide },
+        user
+      ),
+      listerClientsPourSelection(),
+      prisma.vehicule.findMany({ where: { deletedAt: null }, orderBy: { createdAt: "desc" } }),
+      listerTechniciens(),
+      listerTypesService(true),
+      compterInterventionsNonFacturees(user),
+    ]);
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -59,6 +65,19 @@ export default async function InterventionsPage({
         </Link>
       </div>
 
+      {nombreNonFacturees > 0 && (
+        <Link
+          href="/admin/interventions?nonFacturees=true"
+          className="block rounded-xl border border-amber-200 bg-amber-50 p-4 transition hover:border-amber-300"
+        >
+          <p className="text-sm font-semibold text-amber-800">
+            {nombreNonFacturees} intervention{nombreNonFacturees > 1 ? "s" : ""} terminée
+            {nombreNonFacturees > 1 ? "s" : ""} non facturée{nombreNonFacturees > 1 ? "s" : ""}
+          </p>
+          <p className="mt-0.5 text-xs text-amber-700">Cliquez pour filtrer la liste ci-dessous.</p>
+        </Link>
+      )}
+
       <InterventionsTable
         interventions={interventions.map((i) => ({
           id: i.id,
@@ -78,7 +97,7 @@ export default async function InterventionsPage({
           limit={meta.limit}
           total={meta.total}
           basePath="/admin/interventions"
-          searchParams={{ q, statut }}
+          searchParams={{ q, statut, nonFacturees }}
         />
       </div>
     </div>
