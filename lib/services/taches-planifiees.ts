@@ -2,6 +2,7 @@ import { genererFacturesRecurrentes } from "@/lib/services/facturation-recurrent
 import { marquerFacturesEnRetard } from "@/lib/services/factures";
 import { marquerContratsExpires } from "@/lib/services/contrats";
 import { envoyerRelancesImpayees } from "@/lib/services/relances-impayees";
+import { envoyerAlertesRenouvellementContrats } from "@/lib/services/alertes-contrats";
 import { consignerAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -87,6 +88,18 @@ export async function executerTachesQuotidiennes(
       const r = await envoyerRelancesImpayees(maintenant);
       const details = [`${r.envoyees} envoyée(s) sur ${r.examinees} facture(s) en retard`];
       if (r.sansEmail > 0) details.push(`${r.sansEmail} sans e-mail client`);
+      if (r.echecs > 0) details.push(`${r.echecs} échec(s) d'envoi`);
+      return details.join(", ");
+    })
+  );
+
+  // Avant, et non après, la clôture des contrats arrivés à terme ci-dessous :
+  // les alertes ne portent que sur des contrats encore ACTIF, un contrat déjà
+  // basculé en EXPIRE cette nuit n'a plus besoin d'être averti qu'il expire.
+  taches.push(
+    await executer("Alertes de renouvellement de contrat envoyées", async () => {
+      const r = await envoyerAlertesRenouvellementContrats(maintenant);
+      const details = [`${r.envoyees} envoyée(s) sur ${r.examines} contrat(s) proche(s) de l'échéance`];
       if (r.echecs > 0) details.push(`${r.echecs} échec(s) d'envoi`);
       return details.join(", ");
     })

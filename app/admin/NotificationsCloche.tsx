@@ -25,6 +25,13 @@ type RendezVousEnAttente = {
   dateVoulue: string;
 };
 
+type ContratExpirant = {
+  id: string;
+  reference: string;
+  dateFin: string;
+  client: { nom: string };
+};
+
 export default function NotificationsCloche() {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
@@ -33,6 +40,8 @@ export default function NotificationsCloche() {
   const [entretiens, setEntretiens] = useState<EntretienDu[]>([]);
   const [rendezVous, setRendezVous] = useState<RendezVousEnAttente[]>([]);
   const [totalRdv, setTotalRdv] = useState(0);
+  const [contratsExpirants, setContratsExpirants] = useState<ContratExpirant[]>([]);
+  const [totalContrats, setTotalContrats] = useState(0);
   const conteneurRef = useRef<HTMLDivElement>(null);
 
   async function verifier() {
@@ -65,6 +74,21 @@ export default function NotificationsCloche() {
       if (data.success) {
         setRendezVous(data.data);
         setTotalRdv(data.meta?.total ?? data.data.length);
+      }
+    } catch {
+      // Silencieux, même raison.
+    }
+
+    try {
+      // 30 jours : même seuil que le premier palier des alertes par e-mail
+      // envoyées la nuit (voir lib/services/alertes-contrats.ts) — la cloche
+      // et l'e-mail signalent la même fenêtre, pas deux définitions
+      // différentes de « bientôt ».
+      const res = await fetch("/api/contrats?expirantDansJours=30&page=1&limit=5");
+      const data = await res.json();
+      if (data.success) {
+        setContratsExpirants(data.data);
+        setTotalContrats(data.meta?.total ?? data.data.length);
       }
     } catch {
       // Silencieux, même raison.
@@ -104,11 +128,16 @@ export default function NotificationsCloche() {
     router.push("/admin/demandes");
   }
 
-  // Un seul badge numérique, trois sources : la cloche répond à « ai-je
+  function ouvrirContrat() {
+    setOuvert(false);
+    router.push("/admin/contrats");
+  }
+
+  // Un seul badge numérique, quatre sources : la cloche répond à « ai-je
   // quelque chose à traiter ? », pas « combien de types de choses ». Séparer
   // les compteurs en plusieurs badges aurait forcé l'admin à faire l'addition
   // lui-même pour savoir s'il y a urgence.
-  const totalCombine = total + entretiens.length + totalRdv;
+  const totalCombine = total + entretiens.length + totalRdv + totalContrats;
 
   return (
     <div ref={conteneurRef} className="relative ml-auto">
@@ -191,6 +220,42 @@ export default function NotificationsCloche() {
                   className="text-xs font-medium text-jedco hover:underline"
                 >
                   Voir tous les rendez-vous
+                </Link>
+              </div>
+            </>
+          )}
+
+          {contratsExpirants.length > 0 && (
+            <>
+              <div className="flex items-center justify-between border-t border-b border-slate-100 px-4 py-2.5">
+                <span className="text-sm font-semibold text-jedco-dark">Contrats à renouveler</span>
+                <span className="text-xs text-slate-400">{totalContrats}</span>
+              </div>
+              <ul className="max-h-60 overflow-y-auto">
+                {contratsExpirants.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      onClick={ouvrirContrat}
+                      className="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                    >
+                      <p className="font-medium text-jedco-dark">
+                        {c.reference} <span className="font-normal text-slate-500">— {c.client.nom}</span>
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(c.dateFin).getTime() < Date.now() ? "Échu depuis le" : "Échéance le"}{" "}
+                        {new Date(c.dateFin).toLocaleDateString("fr-FR")}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-slate-100 px-4 py-2">
+                <Link
+                  href="/admin/contrats"
+                  onClick={() => setOuvert(false)}
+                  className="text-xs font-medium text-jedco hover:underline"
+                >
+                  Voir tous les contrats
                 </Link>
               </div>
             </>

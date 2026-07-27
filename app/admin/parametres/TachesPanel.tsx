@@ -52,8 +52,9 @@ export default function TachesPanel({
       <p className="mt-1 text-xs text-slate-500">
         Chaque nuit, le système émet les factures des contrats récurrents arrivés à échéance, passe
         les factures dépassées en <strong>En retard</strong>, envoie une relance par e-mail aux
-        clients concernés (7, 15 puis 30 jours de retard) et clôt les contrats arrivés à leur
-        terme. Rien à faire au quotidien — cet encadré sert à vérifier que le lot est bien passé.
+        clients concernés (7, 15 puis 30 jours de retard), alerte avant l&apos;échéance des contrats
+        (30, 15 puis 7 jours restants) et clôt les contrats arrivés à leur terme. Rien à faire au
+        quotidien — cet encadré sert à vérifier que le lot est bien passé.
       </p>
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3">

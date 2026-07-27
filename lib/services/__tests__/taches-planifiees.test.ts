@@ -7,6 +7,7 @@ const NOMS_ATTENDUS = [
   "Facturation des contrats récurrents",
   "Factures échues passées en retard",
   "Relances d'impayés envoyées",
+  "Alertes de renouvellement de contrat envoyées",
   "Contrats arrivés à terme",
 ];
 
@@ -51,7 +52,7 @@ describe("executerTachesQuotidiennes", () => {
     const derniere = await derniereExecution();
     expect(derniere).not.toBeNull();
     expect(derniere!.rapport.declencheur).toBe("manuel");
-    expect(derniere!.rapport.taches).toHaveLength(4);
+    expect(derniere!.rapport.taches).toHaveLength(5);
     // Le détail est une phrase prête à afficher, pas une structure à
     // reformater : c'est ce que rend la page Paramètres tel quel.
     expect(typeof derniere!.rapport.taches[0].detail).toBe("string");

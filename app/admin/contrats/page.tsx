@@ -26,10 +26,14 @@ export default async function ContratsPage({
   const { clientId, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
-  const [{ data: contrats, meta }, clients, typesService] = await Promise.all([
+  const [{ data: contrats, meta }, clients, typesService, { data: expirants }] = await Promise.all([
     listerContrats({ page, limit: TAILLE_PAGE_DEFAUT }),
     listerClientsPourSelection(),
     listerTypesService(true),
+    // Même seuil de 30 jours que la cloche de notifications et le premier
+    // palier des alertes par e-mail nocturnes — une seule définition de
+    // « bientôt » dans tout le système.
+    listerContrats({ page: 1, limit: 50, expirantDansJours: 30 }),
   ]);
 
   return (
@@ -40,6 +44,24 @@ export default async function ContratsPage({
           clients={clients.map((c) => ({ id: c.id, nom: c.nom, code: c.code }))}
           clientIdParDefaut={clientId}
         />
+
+        {expirants.length > 0 && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-800">
+              Contrats à renouveler bientôt ({expirants.length})
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-amber-700">
+              {expirants.map((c) => (
+                <li key={c.id}>
+                  <Link href={`/admin/clients/${c.clientId}`} className="hover:underline">
+                    {c.reference} — {c.client.nom}
+                  </Link>{" "}
+                  — échéance le {c.dateFin.toLocaleDateString("fr-FR")}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <table className="mt-8 w-full text-sm bg-white rounded-lg border border-slate-200 overflow-hidden">
           <thead>
             <tr className="text-left text-slate-500 border-b border-slate-200 bg-slate-50">
