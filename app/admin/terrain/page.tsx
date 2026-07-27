@@ -1,9 +1,24 @@
+import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { listerInterventions } from "@/lib/services/interventions";
 import { STATUTS_ACTIFS } from "@/lib/interventions/statut";
 import InterventionTerrainCard from "./InterventionTerrainCard";
 import PointagePresence from "./PointagePresence";
+import InstallationPWA from "./InstallationPWA";
+
+// Seule cette page déclare le manifest PWA — la racine (app/layout.tsx) sert
+// aussi le site public, qui n'a aucune raison de proposer une installation
+// "JEDCO Terrain". Le scope du manifest (/admin) confirme cette limite côté
+// navigateur.
+export const metadata: Metadata = {
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "JEDCO Terrain" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1A4F8A",
+};
 
 export default async function TerrainPage() {
   const user = await utilisateurCourant();
@@ -41,11 +56,17 @@ export default async function TerrainPage() {
       client: { nom: i.client.nom, telephone: i.client.telephone },
       vehicule: i.vehicule ? { immatriculation: i.vehicule.immatriculation } : null,
       aDejaUnRapport: i.rapportExecution !== null,
+      rapportExecution: i.rapportExecution as {
+        notes: string | null;
+        observations: string | null;
+        signatureUrl: string | null;
+      } | null,
     };
   }
 
   return (
     <div className="max-w-2xl">
+        <InstallationPWA />
         <h2 className="text-xl font-bold text-jedco-dark mb-1">Terrain</h2>
         <p className="text-sm text-slate-500 mb-6">Mes interventions en cours et à venir.</p>
 

@@ -44,6 +44,10 @@ export const rapportExecutionSchema = z.object({
   // URLs déjà uploadées vers R2 via /photos/presign — le serveur ne reçoit
   // jamais l'octet du fichier lui-même (§1.2, §2 du plan).
   photos: z.array(z.url()).default([]),
+  // Même flux d'upload que les photos (presign puis PUT direct vers R2) — la
+  // signature capturée sur le canvas terrain est exportée en PNG côté
+  // client avant d'arriver ici comme une URL, jamais comme un octet brut.
+  signatureUrl: z.url().optional(),
 });
 
 export const presignPhotoSchema = z.object({

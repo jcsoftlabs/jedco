@@ -186,6 +186,7 @@ export async function ajouterRapportExecution(
         heureDebut: rapport.heureDebut?.toISOString() ?? null,
         heureFin: rapport.heureFin?.toISOString() ?? null,
         observations: rapport.observations ?? null,
+        signatureUrl: rapport.signatureUrl ?? null,
       },
       dateExecution: rapport.heureFin ?? new Date(),
     },

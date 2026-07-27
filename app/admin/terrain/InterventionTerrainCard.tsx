@@ -41,6 +41,7 @@ export default function InterventionTerrainCard({
     client: { nom: string; telephone: string };
     vehicule: { immatriculation: string } | null;
     aDejaUnRapport: boolean;
+    rapportExecution: { notes: string | null; observations: string | null; signatureUrl: string | null } | null;
   };
 }) {
   const router = useRouter();
@@ -48,6 +49,7 @@ export default function InterventionTerrainCard({
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [rapportOuvert, setRapportOuvert] = useState(false);
+  const [rapportDeplie, setRapportDeplie] = useState(false);
 
   async function changerStatut(nouveauStatut: string) {
     setErreur(null);
@@ -129,6 +131,15 @@ export default function InterventionTerrainCard({
             Ajouter un rapport
           </button>
         )}
+        {intervention.aDejaUnRapport && (
+          <button
+            type="button"
+            onClick={() => setRapportDeplie((v) => !v)}
+            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            {rapportDeplie ? "Masquer le rapport" : "Voir le rapport"}
+          </button>
+        )}
         {(TRANSITIONS[statut]?.length ?? 0) > 0 && (
           <div className="flex gap-2">
             {TRANSITIONS[statut].map((suivant) => (
@@ -145,6 +156,36 @@ export default function InterventionTerrainCard({
         )}
       </div>
       {erreur && <p className="mt-2 text-xs text-red-600">{erreur}</p>}
+
+      {rapportDeplie && intervention.rapportExecution && (
+        <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3 text-sm">
+          {intervention.rapportExecution.notes && (
+            <p>
+              <span className="font-medium text-slate-700">Notes : </span>
+              <span className="text-slate-600">{intervention.rapportExecution.notes}</span>
+            </p>
+          )}
+          {intervention.rapportExecution.observations && (
+            <p>
+              <span className="font-medium text-slate-700">Observations : </span>
+              <span className="text-slate-600">{intervention.rapportExecution.observations}</span>
+            </p>
+          )}
+          {intervention.rapportExecution.signatureUrl ? (
+            <div>
+              <p className="mb-1 font-medium text-slate-700">Signature client</p>
+              {/* eslint-disable-next-line @next/next/no-img-element -- image R2 externe, pas de bénéfice à next/image ici */}
+              <img
+                src={intervention.rapportExecution.signatureUrl}
+                alt="Signature du client"
+                className="h-24 rounded border border-slate-200 bg-white"
+              />
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400">Aucune signature enregistrée.</p>
+          )}
+        </div>
+      )}
 
       {rapportOuvert && (
         <RapportForm

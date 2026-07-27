@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
+import SignaturePad, { type SignaturePadHandle } from "./SignaturePad";
 
 const TYPES_MIME_ACCEPTES: Record<string, string> = {
   jpg: "image/jpeg",
@@ -38,6 +39,7 @@ export default function RapportForm({
   const [envoi, setEnvoi] = useState(false);
   const [etapeEnvoi, setEtapeEnvoi] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const signatureRef = useRef<SignaturePadHandle>(null);
 
   async function televerserPhoto(fichier: File): Promise<string> {
     const contentType = typeMime(fichier);
@@ -80,6 +82,13 @@ export default function RapportForm({
         photos.push(await televerserPhoto(fichiers[i]));
       }
 
+      let signatureUrl: string | undefined;
+      const signatureBlob = await signatureRef.current?.exporterPng();
+      if (signatureBlob) {
+        setEtapeEnvoi("Envoi de la signature…");
+        signatureUrl = await televerserPhoto(new File([signatureBlob], "signature.png", { type: "image/png" }));
+      }
+
       setEtapeEnvoi("Enregistrement du rapport…");
       const rapportRes = await fetch(`/api/interventions/${interventionId}/rapport`, {
         method: "POST",
@@ -89,6 +98,7 @@ export default function RapportForm({
           observations: observations || undefined,
           heureFin: new Date().toISOString(),
           photos,
+          signatureUrl,
         }),
       });
       const rapportData = await rapportRes.json();
@@ -164,6 +174,11 @@ export default function RapportForm({
             placeholder="Anomalies constatées, matériel utilisé, suivi recommandé…"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Signature du client</label>
+          <SignaturePad ref={signatureRef} />
         </div>
 
         <div>
