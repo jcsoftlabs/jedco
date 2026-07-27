@@ -142,12 +142,43 @@ Connectez-vous ensuite sur `https://<votre-domaine>/admin/login`.
 
 ---
 
-## État actuel (25/07/2026)
+## 8. Moniteur de disponibilité (UptimeRobot) — fait le 27/07/2026
+
+Le plan Hobby de Vercel éteint la fonction serveur après quelques minutes
+sans visite. Le visiteur suivant paie le rallumage — chargement du code
+puis nouvelle connexion à PgBouncer — soit environ **2 secondes** contre
+0,4 seconde une fois la fonction chaude. Avec l'usage réel de JEDCO
+(consultations éparses dans la journée), presque chaque ouverture du
+backoffice tombait sur une fonction endormie.
+
+Un moniteur externe gratuit (UptimeRobot) appelle désormais
+`https://jedco-ten.vercel.app/api/health` toutes les 5 minutes. Ça fait
+deux choses à la fois :
+
+- la fonction ne s'endort plus → plus de démarrage à froid pour les
+  utilisateurs ;
+- **alerte par e-mail si le site tombe** — c'est la supervision de
+  disponibilité que la Phase 7 du plan demandait ; `/api/health` a été
+  écrit pour ça dès la Phase 0 (il vérifie une connexion réelle à la base,
+  pas seulement que le serveur répond).
+
+**⚠️ Ne pas supprimer ce moniteur** — sans lui, le site redevient lent à
+la première visite après une pause, et personne n'est prévenu en cas de
+panne réelle.
+
+Le cron Vercel (§6 bis) ne peut pas jouer ce rôle : le plan Hobby le
+limite à une exécution par jour, largement insuffisant pour empêcher la
+mise en veille.
+
+---
+
+## État actuel (27/07/2026)
 
 - ✅ Base Railway provisionnée et migrée (schéma v1 corrigé)
 - ✅ PgBouncer installé, exposé en public, validé par un test de charge
 - ✅ Dépôt GitHub créé et poussé (`jcsoftlabs/jedco`)
 - ✅ Bucket Cloudflare R2 créé, testé de bout en bout (upload/lecture/suppression)
+- ✅ Déploiement Vercel en production (`jedco-ten.vercel.app`)
+- ✅ Moniteur de disponibilité UptimeRobot configuré (§8)
 - ⬜ Clé Anthropic — à vérifier si déjà révoquée
-- ⬜ Déploiement Vercel de ce backend consolidé — pas encore fait
-- ⬜ Premier compte ADMIN de production — pas encore créé
+- ⬜ Sauvegardes automatiques vers R2 — pas encore construites
