@@ -4,6 +4,7 @@ import { htgToCentimes, encoderTaux, centimesToHTG } from "@/lib/money";
 import { ErreurMetier } from "@/lib/errors";
 import { motifsRecherche } from "@/lib/services/recherche";
 import { genererCsv } from "@/lib/csv";
+import { genererRapportComptablePDF } from "@/lib/pdf";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { StatutFacture } from "@/app/generated/prisma/enums";
 import type { CreerFactureInput, ListeFacturesParams, ModifierFactureInput } from "@/lib/schemas/factures";
@@ -121,6 +122,33 @@ export async function exporterFacturesCsv(
     ],
     lignes
   );
+}
+
+// Même filtrage que exporterFacturesCsv, mais un rapport PDF tabulaire —
+// destiné à un usage interne (comptable, direction) plutôt qu'à un import
+// dans un tableur.
+export async function exporterFacturesPDF(
+  params: Pick<ListeFacturesParams, "clientId" | "statut" | "dateDebut" | "dateFin" | "search">
+): Promise<Buffer> {
+  const where = await construireWhereFactures(params);
+
+  const factures = await prisma.facture.findMany({
+    where,
+    orderBy: { dateEmission: "asc" },
+    include: { client: { select: { nom: true, code: true } }, paiements: true },
+  });
+
+  const lignes = factures.map((f) => ({
+    reference: f.reference,
+    dateEmission: f.dateEmission,
+    clientNom: f.client.nom,
+    clientCode: f.client.code,
+    statut: f.statut,
+    totalHTG: f.totalHTG,
+    payeHTG: f.paiements.reduce((s, p) => s + p.montantHTG, 0n),
+  }));
+
+  return genererRapportComptablePDF(lignes, { dateDebut: params.dateDebut, dateFin: params.dateFin });
 }
 
 export async function obtenirFacture(id: string) {

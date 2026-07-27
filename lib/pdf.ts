@@ -487,6 +487,149 @@ function dessinerNotes(doc: PDFKit.PDFDocument, notes: string, yDepart: number) 
   doc.text(notes, MARGE, yDepart + 12, { width: LARGEUR_UTILE * 0.7 });
 }
 
+// ─── Export comptable groupé ─────────────────────────────────────────────────
+// Un rapport tabulaire (paysage, plusieurs factures par page) — à ne pas
+// confondre avec genererFacturePDF ci-dessus qui produit une facture
+// individuelle pleine page. Le comptable veut ici la liste du trimestre, pas
+// un document par facture.
+
+export type LigneRapportComptable = {
+  reference: string;
+  dateEmission: Date;
+  clientNom: string;
+  clientCode: string;
+  statut: string;
+  totalHTG: Centimes;
+  payeHTG: Centimes;
+};
+
+const MARGE_PAYSAGE = 40;
+const LARGEUR_PAGE_PAYSAGE = 841.89; // A4 paysage en points
+const HAUTEUR_PAGE_PAYSAGE = 595.28;
+const LARGEUR_UTILE_PAYSAGE = LARGEUR_PAGE_PAYSAGE - MARGE_PAYSAGE * 2;
+
+const COL_REF = 85;
+const COL_DATE = 65;
+const COL_CLIENT = 210;
+const COL_STATUT = 95;
+const COL_TOTAL = 100;
+const COL_PAYE = 100;
+// Le solde prend le reliquat, pour que la somme des colonnes retombe pile
+// sur LARGEUR_UTILE_PAYSAGE quelle que soit la largeur choisie ci-dessus.
+const COL_SOLDE = LARGEUR_UTILE_PAYSAGE - COL_REF - COL_DATE - COL_CLIENT - COL_STATUT - COL_TOTAL - COL_PAYE;
+
+function xColonnes() {
+  const xRef = MARGE_PAYSAGE;
+  const xDate = xRef + COL_REF;
+  const xClient = xDate + COL_DATE;
+  const xStatut = xClient + COL_CLIENT;
+  const xTotal = xStatut + COL_STATUT;
+  const xPaye = xTotal + COL_TOTAL;
+  const xSolde = xPaye + COL_PAYE;
+  return { xRef, xDate, xClient, xStatut, xTotal, xPaye, xSolde };
+}
+
+function dessinerEnteteTableauComptable(doc: PDFKit.PDFDocument, y: number): number {
+  const { xRef, xDate, xClient, xStatut, xTotal, xPaye, xSolde } = xColonnes();
+  const hauteur = 22;
+  doc.rect(MARGE_PAYSAGE, y, LARGEUR_UTILE_PAYSAGE, hauteur).fill(BLEU);
+  doc.font("Helvetica-Bold").fontSize(8).fillColor("#FFFFFF");
+  const yTexte = y + 7;
+  doc.text("RÉFÉRENCE", xRef + 8, yTexte, { width: COL_REF - 8 });
+  doc.text("DATE", xDate, yTexte, { width: COL_DATE - 6 });
+  doc.text("CLIENT", xClient, yTexte, { width: COL_CLIENT - 6 });
+  doc.text("STATUT", xStatut, yTexte, { width: COL_STATUT - 6 });
+  doc.text("TOTAL HTG", xTotal, yTexte, { width: COL_TOTAL - 6, align: "right" });
+  doc.text("PAYÉ HTG", xPaye, yTexte, { width: COL_PAYE - 6, align: "right" });
+  doc.text("SOLDE HTG", xSolde, yTexte, { width: COL_SOLDE - 10, align: "right" });
+  return y + hauteur;
+}
+
+export async function genererRapportComptablePDF(
+  lignes: LigneRapportComptable[],
+  periode: { dateDebut?: Date; dateFin?: Date }
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: MARGE_PAYSAGE, bufferPages: true });
+    const chunks: Buffer[] = [];
+    doc.on("data", (c) => chunks.push(c));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    // En-tête de la première page : titre, période couverte, date de
+    // génération. Pas le même bloc que dessinerEntete() (logo + adresse),
+    // trop lourd pour un rapport de plusieurs pages relu en interne.
+    doc.font("Helvetica-Bold").fontSize(18).fillColor(BLEU_SOMBRE).text("EXPORT COMPTABLE", MARGE_PAYSAGE, MARGE_PAYSAGE);
+    doc.font("Helvetica").fontSize(9).fillColor(GRIS_DOUX);
+    const periodeTexte =
+      periode.dateDebut || periode.dateFin
+        ? `Période : ${periode.dateDebut ? formatDate(periode.dateDebut) : "…"} → ${periode.dateFin ? formatDate(periode.dateFin) : "…"}`
+        : "Période : toutes les factures";
+    doc.text(periodeTexte, MARGE_PAYSAGE, MARGE_PAYSAGE + 24);
+    doc.text(`Généré le ${formatDate(new Date())} — ${lignes.length} facture(s)`, MARGE_PAYSAGE, doc.y);
+
+    const yFilet = MARGE_PAYSAGE + 58;
+    doc.rect(MARGE_PAYSAGE, yFilet, LARGEUR_UTILE_PAYSAGE, 2).fill(BLEU);
+
+    const { xRef, xDate, xClient, xStatut, xTotal, xPaye, xSolde } = xColonnes();
+    const hauteurLigne = 20;
+    const hauteurPied = 40;
+    let y = dessinerEnteteTableauComptable(doc, yFilet + 12);
+
+    let totalHTG = 0n;
+    let payeHTG = 0n;
+
+    lignes.forEach((ligne, index) => {
+      if (y + hauteurLigne > HAUTEUR_PAGE_PAYSAGE - MARGE_PAYSAGE - hauteurPied) {
+        doc.addPage({ size: "A4", layout: "landscape", margin: MARGE_PAYSAGE });
+        y = dessinerEnteteTableauComptable(doc, MARGE_PAYSAGE);
+      }
+
+      const solde = ligne.totalHTG - ligne.payeHTG;
+      totalHTG += ligne.totalHTG;
+      payeHTG += ligne.payeHTG;
+
+      if (index % 2 === 1) doc.rect(MARGE_PAYSAGE, y, LARGEUR_UTILE_PAYSAGE, hauteurLigne).fill(GRIS_FOND);
+
+      const yTexte = y + 5;
+      doc.font("Helvetica").fontSize(8).fillColor(GRIS_TEXTE);
+      doc.text(ligne.reference, xRef + 8, yTexte, { width: COL_REF - 8, ellipsis: true, height: 11 });
+      doc.text(formatDate(ligne.dateEmission), xDate, yTexte, { width: COL_DATE - 6 });
+      doc.text(`${ligne.clientNom} (${ligne.clientCode})`, xClient, yTexte, {
+        width: COL_CLIENT - 6,
+        ellipsis: true,
+        height: 11,
+      });
+      doc.fillColor(COULEUR_STATUT[ligne.statut] ?? GRIS_TEXTE);
+      doc.text(LIBELLE_STATUT[ligne.statut] ?? ligne.statut, xStatut, yTexte, { width: COL_STATUT - 6 });
+      doc.fillColor(GRIS_TEXTE);
+      doc.text(montantSansDevise(ligne.totalHTG), xTotal, yTexte, { width: COL_TOTAL - 6, align: "right" });
+      doc.text(montantSansDevise(ligne.payeHTG), xPaye, yTexte, { width: COL_PAYE - 6, align: "right" });
+      doc.font("Helvetica-Bold");
+      doc.fillColor(solde > 0n ? "#A31D1D" : "#1F6B3F");
+      doc.text(montantSansDevise(solde), xSolde, yTexte, { width: COL_SOLDE - 10, align: "right" });
+
+      y += hauteurLigne;
+    });
+
+    doc.moveTo(MARGE_PAYSAGE, y).lineTo(MARGE_PAYSAGE + LARGEUR_UTILE_PAYSAGE, y).lineWidth(0.8).stroke(GRIS_LIGNE);
+    y += 14;
+
+    // Bandeau de totaux, même traitement visuel que dessinerTotaux() sur la
+    // facture individuelle : le total est toujours dans le bandeau bleu.
+    const soldeTotal = totalHTG - payeHTG;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(GRIS_DOUX);
+    doc.text("TOTAUX", xClient, y, { width: COL_CLIENT - 6 });
+    doc.fillColor(GRIS_TEXTE);
+    doc.text(montantSansDevise(totalHTG), xTotal, y, { width: COL_TOTAL - 6, align: "right" });
+    doc.text(montantSansDevise(payeHTG), xPaye, y, { width: COL_PAYE - 6, align: "right" });
+    doc.fillColor(soldeTotal > 0n ? "#A31D1D" : "#1F6B3F");
+    doc.text(montantSansDevise(soldeTotal), xSolde, y, { width: COL_SOLDE - 10, align: "right" });
+
+    doc.end();
+  });
+}
+
 function dessinerPiedDePage(doc: PDFKit.PDFDocument) {
   // Le bloc entier doit tenir au-dessus de la marge basse : pdfkit ajoute
   // automatiquement une page dès qu'un doc.text() dépasserait cette limite, ce

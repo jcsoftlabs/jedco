@@ -7,6 +7,7 @@ import { listerTypesService } from "@/lib/services/types-reference";
 import { formatHTG, centimesToHTG } from "@/lib/money";
 import RevenusChart from "./charts/RevenusChart";
 import RevenusParServiceChart from "./charts/RevenusParServiceChart";
+import RevenusParVilleChart from "./charts/RevenusParVilleChart";
 
 const LIBELLE_STATUT_INTERVENTION: Record<string, string> = {
   EN_ATTENTE: "En attente",
@@ -120,6 +121,11 @@ export default async function AdminHomePage() {
     montantHTG: centimesToHTG(montant as bigint),
   }));
 
+  const partsVille = Object.entries(stats.finance.revenusParVille).map(([ville, montant]) => ({
+    ville,
+    montantHTG: centimesToHTG(montant as bigint),
+  }));
+
   const alertes = [
     stats.alertes.facturesEnRetard > 0 && {
       href: "/admin/factures",
@@ -199,9 +205,15 @@ export default async function AdminHomePage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold text-jedco-dark">Revenus par service</h3>
-          <RevenusParServiceChart parts={partsService} libellesService={libellesService} />
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-semibold text-jedco-dark">Revenus par service</h3>
+            <RevenusParServiceChart parts={partsService} libellesService={libellesService} />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-semibold text-jedco-dark">Revenus par région</h3>
+            <RevenusParVilleChart parts={partsVille} />
+          </div>
         </div>
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
