@@ -40,6 +40,36 @@ repris automatiquement par Vercel.
 
 ---
 
+## 2 bis. ⚠️ PGBOUNCER_POOL_MODE corrigé — fait le 27/07/2026
+
+Le service PgBouncer était réglé sur `PGBOUNCER_POOL_MODE=session` alors que
+tout le reste du système suppose le mode `transaction` — `DATABASE_URL`
+porte déjà `?pgbouncer=true` (paramètre requis par Prisma spécifiquement
+pour ce mode), et `genererFacturesRecurrentes`
+(`lib/services/facturation-recurrente.ts`) utilise un verrou consultatif
+scopé à la transaction pour cette raison précise.
+
+En mode session, PgBouncer immobilise une connexion Postgres par client
+connecté pendant toute la durée de sa connexion, pas seulement le temps
+d'une requête. Avec `PGBOUNCER_POOL_SIZE=20`, quelques clients simultanés
+(serveur de développement + suite de tests) suffisaient à épuiser le pool —
+observé concrètement sous forme d'erreurs `query_wait_timeout` pendant une
+session de tests le 27/07/2026.
+
+**Corrigé** : `PGBOUNCER_POOL_MODE` passé à `transaction` sur Railway, sans
+autre changement (le `?pgbouncer=true` de `DATABASE_URL` était déjà en
+place). Revalidé par 30 requêtes concurrentes exécutées en ligne de
+commande contre la base réelle — toutes réussies, aucune erreur.
+`PGBOUNCER_POOL_SIZE=20` reste inchangé, largement suffisant une fois les
+connexions rendues au pool entre chaque transaction plutôt que retenues par
+client.
+
+⚠️ Ne pas repasser ce réglage à `session` sans en comprendre les
+conséquences — voir §1.9 du plan pour le raisonnement complet sur le verrou
+consultatif.
+
+---
+
 ## 3. ✅ Cloudflare R2 — fait le 25/07/2026
 
 Bucket `jedco` créé, accès public activé via le sous-domaine `*.r2.dev`,
