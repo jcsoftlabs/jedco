@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/db";
 import { referenceFacture } from "@/lib/codes";
-import { htgToCentimes, encoderTaux } from "@/lib/money";
+import { htgToCentimes, encoderTaux, centimesToHTG } from "@/lib/money";
 import { ErreurMetier } from "@/lib/errors";
 import { motifsRecherche } from "@/lib/services/recherche";
+import { genererCsv } from "@/lib/csv";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type { StatutFacture } from "@/app/generated/prisma/enums";
 import type { CreerFactureInput, ListeFacturesParams, ModifierFactureInput } from "@/lib/schemas/factures";
@@ -13,8 +14,14 @@ const INCLUDE_STANDARD = {
   paiements: true,
 } satisfies Prisma.FactureInclude;
 
-export async function listerFactures(params: ListeFacturesParams) {
-  const { page, limit, clientId, statut, dateDebut, dateFin, search } = params;
+// Partagé entre listerFactures (paginé) et exporterFacturesCsv (tout le
+// résultat filtré, sans pagination) : les deux doivent appliquer exactement
+// les mêmes filtres, sinon l'export d'une page filtrée ne correspondrait pas
+// à ce que l'admin a sous les yeux.
+async function construireWhereFactures(
+  params: Pick<ListeFacturesParams, "clientId" | "statut" | "dateDebut" | "dateFin" | "search">
+): Promise<Prisma.FactureWhereInput> {
+  const { clientId, statut, dateDebut, dateFin, search } = params;
 
   // Voir listerClients pour le détail de l'approche (jointure Client pour
   // chercher aussi par nom, unaccent pour l'insensibilité aux accents).
@@ -31,7 +38,7 @@ export async function listerFactures(params: ListeFacturesParams) {
     idsRecherche = lignes.map((l) => l.id);
   }
 
-  const where: Prisma.FactureWhereInput = {
+  return {
     deletedAt: null,
     ...(clientId ? { clientId } : {}),
     ...(statut ? { statut } : {}),
@@ -45,6 +52,11 @@ export async function listerFactures(params: ListeFacturesParams) {
         }
       : {}),
   };
+}
+
+export async function listerFactures(params: ListeFacturesParams) {
+  const { page, limit } = params;
+  const where = await construireWhereFactures(params);
 
   const [data, total] = await Promise.all([
     prisma.facture.findMany({
@@ -58,6 +70,57 @@ export async function listerFactures(params: ListeFacturesParams) {
   ]);
 
   return { data, meta: { page, limit, total } };
+}
+
+// Export comptable — mêmes filtres que la page Facturation (recherche,
+// statut), mais sans pagination : le comptable veut le trimestre entier, pas
+// 50 lignes à la fois. Une ligne par facture, montants en gourdes décimales
+// (pas en centimes) puisque c'est un document destiné à être lu et recalculé
+// dans un tableur, pas à repasser par le système.
+export async function exporterFacturesCsv(
+  params: Pick<ListeFacturesParams, "clientId" | "statut" | "dateDebut" | "dateFin" | "search">
+): Promise<string> {
+  const where = await construireWhereFactures(params);
+
+  const factures = await prisma.facture.findMany({
+    where,
+    orderBy: { dateEmission: "asc" },
+    include: { client: { select: { nom: true, code: true } }, paiements: true },
+  });
+
+  const lignes = factures.map((f) => {
+    const paye = f.paiements.reduce((s, p) => s + p.montantHTG, 0n);
+    return [
+      f.reference,
+      f.dateEmission.toISOString().slice(0, 10),
+      f.dateEcheance.toISOString().slice(0, 10),
+      f.client.code,
+      f.client.nom,
+      f.statut,
+      centimesToHTG(f.montantHTG),
+      centimesToHTG(f.taxeHTG),
+      centimesToHTG(f.totalHTG),
+      centimesToHTG(paye),
+      centimesToHTG(f.totalHTG - paye),
+    ];
+  });
+
+  return genererCsv(
+    [
+      "Référence",
+      "Date d'émission",
+      "Date d'échéance",
+      "Code client",
+      "Client",
+      "Statut",
+      "Montant HTG",
+      "Taxe HTG",
+      "Total HTG",
+      "Payé HTG",
+      "Solde dû HTG",
+    ],
+    lignes
+  );
 }
 
 export async function obtenirFacture(id: string) {

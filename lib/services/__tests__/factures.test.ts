@@ -12,6 +12,7 @@ import {
   marquerFacturesEnRetard,
   statsFactures,
   totauxFactures,
+  exporterFacturesCsv,
 } from "../factures";
 
 describe("module Factures (intégration réelle)", () => {
@@ -341,6 +342,25 @@ describe("module Factures (intégration réelle)", () => {
       await prisma.ligneFacture.deleteMany({ where: { factureId: facture.id } });
       await prisma.facture.delete({ where: { id: facture.id } });
       await prisma.client.delete({ where: { id: client.id } });
+    }
+  });
+
+  it("exporterFacturesCsv applique les mêmes filtres que listerFactures et met les montants en gourdes décimales", async () => {
+    const { data: attendues } = await listerFactures({ page: 1, limit: 100, clientId });
+    const csv = await exporterFacturesCsv({ clientId });
+
+    const lignes = csv.replace(/^﻿/, "").split("\r\n");
+    expect(lignes[0]).toBe(
+      "Référence,Date d'émission,Date d'échéance,Code client,Client,Statut,Montant HTG,Taxe HTG,Total HTG,Payé HTG,Solde dû HTG"
+    );
+    // Une ligne d'en-tête + une ligne par facture, aucune pagination.
+    expect(lignes.length - 1).toBe(attendues.length);
+    for (const f of attendues) {
+      const ligne = lignes.find((l) => l.startsWith(f.reference));
+      expect(ligne).toBeDefined();
+      // Les montants sont en gourdes décimales, pas en centimes bruts —
+      // c'est un document lu par un humain, pas repassé par le système.
+      expect(ligne).toContain(String(Number(f.totalHTG) / 100));
     }
   });
 });

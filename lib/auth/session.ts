@@ -42,9 +42,15 @@ export async function creerSession(userId: string, meta: MetaSession = {}): Prom
 export async function validerSession(token: string | undefined | null) {
   if (!token) return null;
 
+  // La fiche Technicien est chargée avec l'utilisateur — sans elle,
+  // scopeInterventions (lib/auth/rbac.ts) trouve `user.technicien` toujours
+  // indéfini et traite tout compte TECHNICIEN comme n'ayant aucune fiche
+  // liée, renvoyant `{ id: "__aucun__" }` : zéro intervention, y compris
+  // les siennes. Bug réel constaté en base — un technicien connecté ne
+  // voyait rien du tout sur la page Terrain.
   const session = await prisma.session.findUnique({
     where: { tokenHash: hacherToken(token) },
-    include: { user: true },
+    include: { user: { include: { technicien: { select: { id: true } } } } },
   });
 
   if (!session) return null;

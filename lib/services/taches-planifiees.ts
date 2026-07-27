@@ -1,6 +1,7 @@
 import { genererFacturesRecurrentes } from "@/lib/services/facturation-recurrente";
 import { marquerFacturesEnRetard } from "@/lib/services/factures";
 import { marquerContratsExpires } from "@/lib/services/contrats";
+import { envoyerRelancesImpayees } from "@/lib/services/relances-impayees";
 import { consignerAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -74,6 +75,20 @@ export async function executerTachesQuotidiennes(
     await executer("Factures échues passées en retard", async () => {
       const n = await marquerFacturesEnRetard(maintenant);
       return `${n} facture(s) marquée(s) EN_RETARD`;
+    })
+  );
+
+  // Après, et non avant, le passage en EN_RETARD ci-dessus : les relances ne
+  // portent que sur les factures déjà marquées, sinon une facture qui vient
+  // tout juste de dépasser son échéance ce soir ne serait vue qu'au lot
+  // suivant.
+  taches.push(
+    await executer("Relances d'impayés envoyées", async () => {
+      const r = await envoyerRelancesImpayees(maintenant);
+      const details = [`${r.envoyees} envoyée(s) sur ${r.examinees} facture(s) en retard`];
+      if (r.sansEmail > 0) details.push(`${r.sansEmail} sans e-mail client`);
+      if (r.echecs > 0) details.push(`${r.echecs} échec(s) d'envoi`);
+      return details.join(", ");
     })
   );
 

@@ -6,7 +6,7 @@ import { ErreurMetier } from "@/lib/errors";
 import { formatHTG } from "@/lib/money";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/db";
-import type { DemandeDevis } from "@/app/generated/prisma/client";
+import type { DemandeDevis, RendezVous } from "@/app/generated/prisma/client";
 
 function formatDateFr(date: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
@@ -39,6 +39,32 @@ ${demande.email ? `<li><strong>E-mail :</strong> ${demande.email}</li>` : ""}
 ${demande.message ? `<li><strong>Message :</strong> ${demande.message}</li>` : ""}
 </ul>
 <p>À traiter dans le backoffice, section Demandes.</p>`,
+  });
+}
+
+// Même principe qu'envoyerNotificationDemandeDevis ci-dessus, pour la prise
+// de rendez-vous publique.
+export async function envoyerNotificationRendezVous(rdv: RendezVous): Promise<void> {
+  if (!env.NOTIFICATIONS_EMAIL) return;
+
+  const type = await prisma.typeService.findUnique({ where: { code: rdv.service } });
+  const libelleService = type?.libelle ?? rdv.service;
+
+  await envoyerEmailSimple({
+    destinataire: env.NOTIFICATIONS_EMAIL,
+    sujet: `Nouvelle demande de rendez-vous — ${rdv.nom}`,
+    corpsHtml: `<p>Nouvelle demande de rendez-vous reçue depuis le site public :</p>
+<ul>
+<li><strong>Nom :</strong> ${rdv.nom}</li>
+<li><strong>Téléphone :</strong> ${rdv.telephone}</li>
+${rdv.email ? `<li><strong>E-mail :</strong> ${rdv.email}</li>` : ""}
+<li><strong>Service :</strong> ${libelleService}</li>
+<li><strong>Ville :</strong> ${rdv.ville}</li>
+${rdv.adresse ? `<li><strong>Adresse :</strong> ${rdv.adresse}</li>` : ""}
+<li><strong>Date souhaitée :</strong> ${formatDateFr(rdv.dateVoulue)}</li>
+${rdv.message ? `<li><strong>Message :</strong> ${rdv.message}</li>` : ""}
+</ul>
+<p>À confirmer dans le backoffice, section Demandes.</p>`,
   });
 }
 

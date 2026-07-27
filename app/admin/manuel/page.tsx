@@ -349,7 +349,7 @@ export default async function ManuelPage() {
       <Section id="automatique" titre="Ce que le système fait tout seul">
         <Carte titre="Chaque nuit, sans intervention">
           <p className="max-w-[68ch] text-slate-600">
-            Trois opérations tournent automatiquement vers 1 h du matin :
+            Quatre opérations tournent automatiquement vers 1 h du matin :
           </p>
           <Liste>
             <li>
@@ -361,6 +361,11 @@ export default async function ManuelPage() {
               <strong>Factures en retard.</strong> Toute facture impayée dont la date
               d&apos;échéance est passée bascule en <Ui>En retard</Ui>. C&apos;est ce qui rend
               fiable le total <Ui>Impayé</Ui> de la page Facturation.
+            </li>
+            <li>
+              <strong>Relances d&apos;impayés.</strong> Un client dont la facture est en retard
+              depuis 7, 15 puis 30 jours reçoit un e-mail de rappel — un seul par palier, jamais
+              plusieurs le même jour même si le lot a manqué des nuits.
             </li>
             <li>
               <strong>Contrats terminés.</strong> Un contrat qui atteint sa date de fin passe en{" "}

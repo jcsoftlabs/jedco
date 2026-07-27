@@ -13,12 +13,18 @@ export default function Pager({
   total,
   basePath,
   searchParams = {},
+  paramPage = "page",
 }: {
   page: number;
   limit: number;
   total: number;
   basePath: string;
   searchParams?: Record<string, string | undefined>;
+  // Nom du paramètre d'URL porté par la pagination — "page" par défaut.
+  // Une page qui affiche deux listes paginées indépendamment (ex. Demandes :
+  // devis + rendez-vous) a besoin de deux noms distincts, sinon le second
+  // Pager écraserait la position du premier au moindre clic.
+  paramPage?: string;
 }) {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   if (totalPages <= 1) return null;
@@ -28,7 +34,7 @@ export default function Pager({
     for (const [cle, valeur] of Object.entries(searchParams)) {
       if (valeur) params.set(cle, valeur);
     }
-    params.set("page", String(p));
+    params.set(paramPage, String(p));
     return `${basePath}?${params.toString()}`;
   }
 

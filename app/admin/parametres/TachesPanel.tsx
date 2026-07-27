@@ -51,7 +51,8 @@ export default function TachesPanel({
       <h3 className="text-sm font-semibold text-jedco-dark">Traitements automatiques</h3>
       <p className="mt-1 text-xs text-slate-500">
         Chaque nuit, le système émet les factures des contrats récurrents arrivés à échéance, passe
-        les factures dépassées en <strong>En retard</strong> et clôt les contrats arrivés à leur
+        les factures dépassées en <strong>En retard</strong>, envoie une relance par e-mail aux
+        clients concernés (7, 15 puis 30 jours de retard) et clôt les contrats arrivés à leur
         terme. Rien à faire au quotidien — cet encadré sert à vérifier que le lot est bien passé.
       </p>
 

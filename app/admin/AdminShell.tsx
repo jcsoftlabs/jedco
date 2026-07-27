@@ -47,6 +47,9 @@ const I = {
   manuel: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z",
   utilisateurs: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
   profil: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM6 21v-1a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1",
+  journal: "M9 12h6m-6 4h6M9 8h1M4 5.5A2.5 2.5 0 0 1 6.5 3H18a1 1 0 0 1 1 1v15.5a1.5 1.5 0 0 1-1.5 1.5H6.5A2.5 2.5 0 0 1 4 18.5v-13Z",
+  presences: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
+  toilettes: "M6 21v-8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8M9 3h6l1 4H8l1-4Z",
 };
 
 const LIENS_ADMIN: Lien[] = [
@@ -57,7 +60,9 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/interventions", label: "Interventions", icone: <Icone d={I.interventions} /> },
   { href: "/admin/terrain", label: "Terrain", icone: <Icone d={I.terrain} /> },
   { href: "/admin/techniciens", label: "Techniciens", icone: <Icone d={I.techniciens} /> },
+  { href: "/admin/presences", label: "Présences", icone: <Icone d={I.presences} /> },
   { href: "/admin/vehicules", label: "Flotte", icone: <Icone d={I.flotte} /> },
+  { href: "/admin/toilettes", label: "Toilettes mobiles", icone: <Icone d={I.toilettes} /> },
   { href: "/admin/factures", label: "Facturation", icone: <Icone d={I.factures} /> },
   { href: "/admin/devis", label: "Devis", icone: <Icone d={I.devis} /> },
   { href: "/admin/catalogue", label: "Catalogue", icone: <Icone d={I.catalogue} /> },
@@ -65,6 +70,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },
   { href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> },
   { href: "/admin/utilisateurs", label: "Utilisateurs", icone: <Icone d={I.utilisateurs} />, adminSeul: true },
+  { href: "/admin/journal", label: "Journal d'audit", icone: <Icone d={I.journal} />, adminSeul: true },
   { href: "/admin/parametres", label: "Paramètres", icone: <Icone d={I.parametres} /> },
   { href: "/admin/manuel", label: "Manuel", icone: <Icone d={I.manuel} /> },
 ];

@@ -3,6 +3,7 @@ import { utilisateurCourant } from "@/lib/auth/current-user";
 import { listerInterventions } from "@/lib/services/interventions";
 import { STATUTS_ACTIFS } from "@/lib/interventions/statut";
 import InterventionTerrainCard from "./InterventionTerrainCard";
+import PointagePresence from "./PointagePresence";
 
 export default async function TerrainPage() {
   const user = await utilisateurCourant();
@@ -47,6 +48,12 @@ export default async function TerrainPage() {
     <div className="max-w-2xl">
         <h2 className="text-xl font-bold text-jedco-dark mb-1">Terrain</h2>
         <p className="text-sm text-slate-500 mb-6">Mes interventions en cours et à venir.</p>
+
+        {/* Le pointage n'a de sens que pour la personne qui pointe pour
+            elle-même — ADMIN et SUPERVISEUR utilisent aussi cette page pour
+            suivre les interventions de toute l'équipe, mais n'ont pas de
+            fiche Technicien liée à leur compte. */}
+        {user.role === "TECHNICIEN" && <PointagePresence />}
 
         <div className="space-y-3">
           {actives.map((i) => (

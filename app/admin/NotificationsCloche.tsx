@@ -13,11 +13,26 @@ type Demande = {
   createdAt: string;
 };
 
+type EntretienDu = {
+  id: string;
+  immatriculation: string;
+  prochainEntretien: string;
+};
+
+type RendezVousEnAttente = {
+  id: string;
+  nom: string;
+  dateVoulue: string;
+};
+
 export default function NotificationsCloche() {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [total, setTotal] = useState(0);
+  const [entretiens, setEntretiens] = useState<EntretienDu[]>([]);
+  const [rendezVous, setRendezVous] = useState<RendezVousEnAttente[]>([]);
+  const [totalRdv, setTotalRdv] = useState(0);
   const conteneurRef = useRef<HTMLDivElement>(null);
 
   async function verifier() {
@@ -31,6 +46,28 @@ export default function NotificationsCloche() {
     } catch {
       // Silencieux : une vérification manquée ne doit pas perturber l'admin,
       // la suivante rattrapera dans INTERVALLE_MS.
+    }
+
+    // Requête séparée, sur un point d'entrée séparé : un échec ici (droits
+    // insuffisants pour un futur rôle, endpoint temporairement indisponible)
+    // ne doit pas priver l'admin des nouvelles demandes de devis ci-dessus.
+    try {
+      const res = await fetch("/api/vehicules/entretiens-dus");
+      const data = await res.json();
+      if (data.success) setEntretiens(data.data);
+    } catch {
+      // Silencieux, même raison.
+    }
+
+    try {
+      const res = await fetch("/api/rendez-vous?statut=EN_ATTENTE&page=1&limit=5");
+      const data = await res.json();
+      if (data.success) {
+        setRendezVous(data.data);
+        setTotalRdv(data.meta?.total ?? data.data.length);
+      }
+    } catch {
+      // Silencieux, même raison.
     }
   }
 
@@ -57,6 +94,22 @@ export default function NotificationsCloche() {
     router.push(`/admin/demandes?highlight=${id}`);
   }
 
+  function ouvrirVehicule() {
+    setOuvert(false);
+    router.push("/admin/vehicules");
+  }
+
+  function ouvrirRendezVous() {
+    setOuvert(false);
+    router.push("/admin/demandes");
+  }
+
+  // Un seul badge numérique, trois sources : la cloche répond à « ai-je
+  // quelque chose à traiter ? », pas « combien de types de choses ». Séparer
+  // les compteurs en plusieurs badges aurait forcé l'admin à faire l'addition
+  // lui-même pour savoir s'il y a urgence.
+  const totalCombine = total + entretiens.length + totalRdv;
+
   return (
     <div ref={conteneurRef} className="relative ml-auto">
       <button
@@ -68,9 +121,9 @@ export default function NotificationsCloche() {
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
-        {total > 0 && (
+        {totalCombine > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-            {total > 9 ? "9+" : total}
+            {totalCombine > 9 ? "9+" : totalCombine}
           </span>
         )}
       </button>
@@ -109,6 +162,73 @@ export default function NotificationsCloche() {
               Voir toutes les demandes
             </Link>
           </div>
+
+          {rendezVous.length > 0 && (
+            <>
+              <div className="flex items-center justify-between border-t border-b border-slate-100 px-4 py-2.5">
+                <span className="text-sm font-semibold text-jedco-dark">Rendez-vous à confirmer</span>
+                <span className="text-xs text-slate-400">{totalRdv}</span>
+              </div>
+              <ul className="max-h-60 overflow-y-auto">
+                {rendezVous.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      onClick={ouvrirRendezVous}
+                      className="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                    >
+                      <p className="font-medium text-jedco-dark">{r.nom}</p>
+                      <p className="text-xs text-slate-500">
+                        Souhaité le {new Date(r.dateVoulue).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-slate-100 px-4 py-2">
+                <Link
+                  href="/admin/demandes"
+                  onClick={() => setOuvert(false)}
+                  className="text-xs font-medium text-jedco hover:underline"
+                >
+                  Voir tous les rendez-vous
+                </Link>
+              </div>
+            </>
+          )}
+
+          {entretiens.length > 0 && (
+            <>
+              <div className="flex items-center justify-between border-t border-b border-slate-100 bg-amber-50 px-4 py-2.5">
+                <span className="text-sm font-semibold text-amber-800">Entretien à prévoir</span>
+                <span className="text-xs text-amber-600">{entretiens.length}</span>
+              </div>
+              <ul className="max-h-60 overflow-y-auto">
+                {entretiens.map((v) => (
+                  <li key={v.id}>
+                    <button
+                      onClick={ouvrirVehicule}
+                      className="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                    >
+                      <p className="font-medium text-jedco-dark">{v.immatriculation}</p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(v.prochainEntretien).getTime() < Date.now() ? "En retard depuis le" : "Prévu le"}{" "}
+                        {new Date(v.prochainEntretien).toLocaleDateString("fr-FR")}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-slate-100 px-4 py-2">
+                <Link
+                  href="/admin/vehicules"
+                  onClick={() => setOuvert(false)}
+                  className="text-xs font-medium text-jedco hover:underline"
+                >
+                  Voir la flotte
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

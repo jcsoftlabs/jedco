@@ -2,6 +2,7 @@
 
 import RechercheServeur from "../RechercheServeur";
 import FactureRow from "./FactureRow";
+import ExporterCsvLien from "./ExporterCsvLien";
 
 type Facture = {
   id: string;
@@ -27,20 +28,25 @@ export default function FacturesTable({
 }) {
   return (
     <div>
-      <RechercheServeur
-        placeholder="Rechercher une facture (référence, client…)"
-        filtre={{
-          label: "Statut",
-          param: "statut",
-          options: [
-            { valeur: "EN_ATTENTE", label: "En attente" },
-            { valeur: "PARTIELLEMENT_PAYEE", label: "Partiellement payée" },
-            { valeur: "PAYEE", label: "Payée" },
-            { valeur: "EN_RETARD", label: "En retard" },
-            { valeur: "ANNULEE", label: "Annulée" },
-          ],
-        }}
-      />
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-[280px] flex-1">
+          <RechercheServeur
+            placeholder="Rechercher une facture (référence, client…)"
+            filtre={{
+              label: "Statut",
+              param: "statut",
+              options: [
+                { valeur: "EN_ATTENTE", label: "En attente" },
+                { valeur: "PARTIELLEMENT_PAYEE", label: "Partiellement payée" },
+                { valeur: "PAYEE", label: "Payée" },
+                { valeur: "EN_RETARD", label: "En retard" },
+                { valeur: "ANNULEE", label: "Annulée" },
+              ],
+            }}
+          />
+        </div>
+        <ExporterCsvLien />
+      </div>
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
