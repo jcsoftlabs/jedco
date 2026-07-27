@@ -25,7 +25,7 @@ const INCLUDE_STANDARD = {
 } satisfies Prisma.InterventionInclude;
 
 export async function listerInterventions(params: ListeInterventionsParams, user: UtilisateurScope) {
-  const { page, limit, statut, type, ville, technicienId, date, nonFacturees, search } = params;
+  const { page, limit, statut, type, ville, technicienId, date, canal, nonFacturees, search } = params;
 
   // Voir listerClients pour le détail de l'approche. Le filtre RBAC
   // (scopeInterventions) reste appliqué normalement ci-dessous : cette
@@ -54,6 +54,7 @@ export async function listerInterventions(params: ListeInterventionsParams, user
     ...(ville ? { ville } : {}),
     ...(technicienId ? { techniciens: { some: { technicienId } } } : {}),
     ...(date ? { datePlanifiee: { gte: debutJourLocal(date), lte: finJourLocal(date) } } : {}),
+    ...(canal ? { canal } : {}),
     // "Facturée" n'est pas un statut de StatutIntervention (§3.2 du plan
     // initial ne l'y ajoute pas non plus) — une intervention COMPLETE sans
     // facture liée reste indiscernable d'une intervention COMPLETE déjà
@@ -210,6 +211,25 @@ export async function compterInterventionsNonFacturees(user: UtilisateurScope): 
   });
 }
 
+// Répartition des interventions par canal d'origine (WEB/TELEPHONE/TERRAIN)
+// sur une fenêtre glissante — pour le tableau de bord (§3.2 : "vue globale
+// des demandes"). groupBy plutôt qu'un findMany + réduction JavaScript, pour
+// que le coût reste constant quel que soit le nombre d'interventions.
+export async function statsParCanal(depuis: Date) {
+  const lignes = await prisma.intervention.groupBy({
+    by: ["canal"],
+    where: { deletedAt: null, createdAt: { gte: depuis } },
+    _count: true,
+  });
+  return Object.fromEntries(lignes.map((l) => [l.canal, l._count]));
+}
+
+// Regroupe par TECHNICIEN et par VÉHICULE — le planning opérationnel d'une
+// entreprise de terrain répond à deux questions distinctes : "que fait
+// chaque équipe aujourd'hui ?" et "quel camion est occupé, et quand se
+// libère-t-il ?". Une seule intervention apparaît dans les deux vues (elle a
+// souvent un véhicule ET un ou plusieurs techniciens), ce n'est pas une
+// double comptabilisation, juste deux angles sur les mêmes données.
 export async function planningDuJour(date: Date) {
   const interventions = await prisma.intervention.findMany({
     where: { deletedAt: null, datePlanifiee: { gte: debutJourLocal(date), lte: finJourLocal(date) } },
@@ -218,15 +238,23 @@ export async function planningDuJour(date: Date) {
   });
 
   const parTechnicien = new Map<string, typeof interventions>();
+  const parVehicule = new Map<string, typeof interventions>();
+
   for (const intervention of interventions) {
     if (intervention.techniciens.length === 0) {
       parTechnicien.set("non_assigne", [...(parTechnicien.get("non_assigne") ?? []), intervention]);
-      continue;
+    } else {
+      for (const { technicienId } of intervention.techniciens) {
+        parTechnicien.set(technicienId, [...(parTechnicien.get(technicienId) ?? []), intervention]);
+      }
     }
-    for (const { technicienId } of intervention.techniciens) {
-      parTechnicien.set(technicienId, [...(parTechnicien.get(technicienId) ?? []), intervention]);
-    }
+
+    const cleVehicule = intervention.vehiculeId ?? "non_assigne";
+    parVehicule.set(cleVehicule, [...(parVehicule.get(cleVehicule) ?? []), intervention]);
   }
 
-  return Object.fromEntries(parTechnicien);
+  return {
+    parTechnicien: Object.fromEntries(parTechnicien),
+    parVehicule: Object.fromEntries(parVehicule),
+  };
 }

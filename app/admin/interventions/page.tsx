@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { listerInterventions, compterInterventionsNonFacturees } from "@/lib/services/interventions";
-import { statutInterventionSchema } from "@/lib/schemas/interventions";
+import { statutInterventionSchema, canalDemandeSchema } from "@/lib/schemas/interventions";
 import { listerClientsPourSelection } from "@/lib/services/clients";
 import { listerTechniciens } from "@/lib/services/techniciens";
 import { listerTypesService } from "@/lib/services/types-reference";
@@ -14,7 +14,13 @@ import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
 export default async function InterventionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; statut?: string; nonFacturees?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    q?: string;
+    statut?: string;
+    nonFacturees?: string;
+    canal?: string;
+  }>;
 }) {
   const user = await utilisateurCourant();
   if (!user) redirect("/admin/login");
@@ -22,15 +28,23 @@ export default async function InterventionsPage({
   // un rôle sans fiche technicien), mais un SUPPORT n'a rien à faire ici.
   if (user.role === "SUPPORT") redirect("/admin/support");
 
-  const { page: pageParam, q, statut, nonFacturees } = await searchParams;
+  const { page: pageParam, q, statut, nonFacturees, canal } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const statutValide = statutInterventionSchema.safeParse(statut).data;
+  const canalValide = canalDemandeSchema.safeParse(canal).data;
   const nonFactureesValide = nonFacturees === "true" ? true : undefined;
 
   const [{ data: interventions, meta }, clients, vehicules, techniciens, typesService, nombreNonFacturees] =
     await Promise.all([
       listerInterventions(
-        { page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide, nonFacturees: nonFactureesValide },
+        {
+          page,
+          limit: TAILLE_PAGE_DEFAUT,
+          search: q,
+          statut: statutValide,
+          nonFacturees: nonFactureesValide,
+          canal: canalValide,
+        },
         user
       ),
       listerClientsPourSelection(),
@@ -57,6 +71,12 @@ export default async function InterventionsPage({
           }))}
           typesService={typesService}
         />
+        <Link
+          href="/admin/interventions/calendrier"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
+        >
+          Calendrier opérationnel
+        </Link>
         <Link
           href="/admin/vehicules"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100"
@@ -85,6 +105,7 @@ export default async function InterventionsPage({
           type: i.type,
           statut: i.statut,
           priorite: i.priorite,
+          canal: i.canal,
           ville: i.ville,
           datePlanifiee: i.datePlanifiee ? i.datePlanifiee.toISOString() : null,
           client: { nom: i.client.nom },
@@ -97,7 +118,7 @@ export default async function InterventionsPage({
           limit={meta.limit}
           total={meta.total}
           basePath="/admin/interventions"
-          searchParams={{ q, statut, nonFacturees }}
+          searchParams={{ q, statut, nonFacturees, canal }}
         />
       </div>
     </div>

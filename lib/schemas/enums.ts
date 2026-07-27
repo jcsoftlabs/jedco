@@ -26,6 +26,8 @@ export const statutInterventionSchema = z.enum([
   "ANNULE",
 ]);
 
+export const canalDemandeSchema = z.enum(["WEB", "TELEPHONE", "TERRAIN"]);
+
 // ─── Administration des tables de référence ─────────────────────────────────
 
 export const creerTypeReferenceSchema = z.object({

@@ -53,6 +53,18 @@ enum Priorite {
   URGENTE
 }
 
+// Comment la demande est arrivée jusqu'à JEDCO. Une intervention n'est
+// jamais créée automatiquement (voir CreerInterventionInput) — c'est
+// toujours un membre du personnel qui la saisit, y compris quand la demande
+// initiale vient du formulaire public (DemandeDevis/RendezVous). Sans ce
+// champ, une intervention issue du site web et une intervention née d'un
+// appel téléphonique étaient indiscernables une fois dans le système.
+enum CanalDemande {
+  WEB
+  TELEPHONE
+  TERRAIN
+}
+
 enum StatutVehicule {
   DISPONIBLE
   EN_SERVICE
@@ -285,6 +297,11 @@ model Intervention {
   ville            String
   statut           StatutIntervention       @default(EN_ATTENTE)
   priorite         Priorite                 @default(NORMALE)
+  // TELEPHONE par défaut : c'est le canal le plus courant pour une entreprise
+  // d'assainissement en Haïti, et une valeur par défaut explicite évite de
+  // forcer un choix sur les milliers d'interventions déjà en base au moment
+  // de la migration (elles deviennent TELEPHONE plutôt que NULL).
+  canal            CanalDemande             @default(TELEPHONE)
   datePlanifiee    DateTime?
   // Durée estimée en minutes — sert de base à la plage horaire utilisée par la
   // contrainte d'exclusion PostgreSQL anti double-booking ajoutée en Phase 1

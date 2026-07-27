@@ -19,6 +19,12 @@ const COULEUR_STATUT: Record<string, string> = {
   ANNULE: "bg-red-100 text-red-700",
 };
 
+const LIBELLE_CANAL: Record<string, string> = {
+  WEB: "Web",
+  TELEPHONE: "Téléphone",
+  TERRAIN: "Terrain",
+};
+
 export default function InterventionRow({
   intervention,
 }: {
@@ -28,6 +34,7 @@ export default function InterventionRow({
     type: string;
     statut: string;
     priorite: string;
+    canal: string;
     ville: string;
     datePlanifiee: string | null;
     client: { nom: string };
@@ -67,6 +74,7 @@ export default function InterventionRow({
       <td className="py-2 px-4 font-mono text-xs">{intervention.reference}</td>
       <td className="px-4">{intervention.client.nom}</td>
       <td className="px-4">{intervention.type}</td>
+      <td className="px-4 text-slate-500">{LIBELLE_CANAL[intervention.canal] ?? intervention.canal}</td>
       <td className="px-4">{intervention.ville}</td>
       <td className="px-4">{intervention.vehicule?.immatriculation ?? "—"}</td>
       <td className="px-4">

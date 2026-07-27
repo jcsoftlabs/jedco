@@ -29,11 +29,28 @@ async function main() {
     await prisma.facture.deleteMany({ where: { clientId: { in: ids } } });
     await prisma.ligneDevis.deleteMany({ where: { devis: { clientId: { in: ids } } } });
     await prisma.devis.deleteMany({ where: { clientId: { in: ids } } });
+    // Enfants d'Intervention avant Intervention elle-même — sans ça, une
+    // intervention test avec un technicien ou une photo assignés fait
+    // échouer la suppression avec une violation de clé étrangère.
+    await prisma.interventionTechnicien.deleteMany({ where: { intervention: { clientId: { in: ids } } } });
+    await prisma.media.deleteMany({ where: { intervention: { clientId: { in: ids } } } });
     await prisma.intervention.deleteMany({ where: { clientId: { in: ids } } });
     await prisma.contrat.deleteMany({ where: { clientId: { in: ids } } });
     await prisma.sessionClient.deleteMany({ where: { clientId: { in: ids } } });
     await prisma.codeConnexionClient.deleteMany({ where: { clientId: { in: ids } } });
     await prisma.client.deleteMany({ where: { id: { in: ids } } });
+  }
+
+  // Véhicules de test — après les interventions ci-dessus, qui les
+  // référencent potentiellement (Intervention.vehiculeId).
+  const vehicules = await prisma.vehicule.findMany({
+    where: { immatriculation: { startsWith: PREFIXE_CLIENT } },
+    select: { id: true, immatriculation: true },
+  });
+  if (vehicules.length > 0) {
+    const idsVehicules = vehicules.map((v) => v.id);
+    await prisma.entretienVehicule.deleteMany({ where: { vehiculeId: { in: idsVehicules } } });
+    await prisma.vehicule.deleteMany({ where: { id: { in: idsVehicules } } });
   }
 
   const users = await prisma.user.findMany({
@@ -44,6 +61,13 @@ async function main() {
 
   if (idsUsers.length > 0) {
     await prisma.conversation.updateMany({ where: { agentId: { in: idsUsers } }, data: { agentId: null } });
+    // Un technicien de test peut rester affecté à une intervention dont le
+    // CLIENT n'est pas lui-même préfixé TEST- (ex: script de vérification
+    // manuel) — nettoyage défensif avant de supprimer la fiche Technicien.
+    await prisma.interventionTechnicien.deleteMany({
+      where: { technicien: { userId: { in: idsUsers } } },
+    });
+    await prisma.presence.deleteMany({ where: { technicien: { userId: { in: idsUsers } } } });
     await prisma.technicien.deleteMany({ where: { userId: { in: idsUsers } } });
     await prisma.session.deleteMany({ where: { userId: { in: idsUsers } } });
     await prisma.auditLog.deleteMany({ where: { userId: { in: idsUsers } } });

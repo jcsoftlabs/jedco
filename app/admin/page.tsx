@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { utilisateurCourant } from "@/lib/auth/current-user";
 import { statsPilotage } from "@/lib/services/pilotage";
+import { statsParCanal } from "@/lib/services/interventions";
 import { listerTypesService } from "@/lib/services/types-reference";
 import { formatHTG, centimesToHTG } from "@/lib/money";
 import RevenusChart from "./charts/RevenusChart";
@@ -100,7 +101,12 @@ export default async function AdminHomePage() {
   // redirection explicite, il verrait des données financières internes.
   if (user.role === "SUPPORT") redirect("/admin/support");
 
-  const [stats, typesService] = await Promise.all([statsPilotage(), listerTypesService()]);
+  const quatreVingtDixJours = new Date(Date.now() - 90 * 86_400_000);
+  const [stats, typesService, parCanal] = await Promise.all([
+    statsPilotage(),
+    listerTypesService(),
+    statsParCanal(quatreVingtDixJours),
+  ]);
   const libellesService = Object.fromEntries(typesService.map((t) => [t.code, t.libelle]));
 
   const pointsGraphe = stats.serieMensuelle.map((p) => ({
@@ -204,6 +210,15 @@ export default async function AdminHomePage() {
               parStatut={stats.interventions.parStatut}
               libelles={LIBELLE_STATUT_INTERVENTION}
               couleurs={COULEUR_STATUT_INTERVENTION}
+            />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-jedco-dark">Demandes par canal</h3>
+            <p className="mb-3 text-xs text-slate-400">Interventions saisies ces 90 derniers jours.</p>
+            <RepartitionBarre
+              parStatut={parCanal}
+              libelles={{ WEB: "Web", TELEPHONE: "Téléphone", TERRAIN: "Terrain" }}
+              couleurs={{ WEB: "bg-jedco", TELEPHONE: "bg-amber-500", TERRAIN: "bg-emerald-500" }}
             />
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

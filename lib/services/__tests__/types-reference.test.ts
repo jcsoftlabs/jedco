@@ -60,6 +60,7 @@ describe("tables de référence des types (intégration réelle)", () => {
       adresse: "x",
       ville: "x",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [],
     });
@@ -81,6 +82,7 @@ describe("tables de référence des types (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       })

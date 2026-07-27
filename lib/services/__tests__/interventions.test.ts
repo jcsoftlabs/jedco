@@ -11,6 +11,7 @@ import {
   listerInterventions,
   planningDuJour,
   compterInterventionsNonFacturees,
+  statsParCanal,
   type UtilisateurScope,
 } from "../interventions";
 
@@ -73,6 +74,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "12 Rue Test",
       ville: "Port-au-Prince",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [],
     });
@@ -91,6 +93,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       })
@@ -104,6 +107,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "x",
       ville: "x",
       priorite: "URGENTE",
+      canal: "TELEPHONE",
       datePlanifiee: new Date("2027-02-01T09:00:00Z"),
       dureeEstimeeMin: 45,
       vehiculeId,
@@ -122,6 +126,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "x",
       ville: "x",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [technicienId],
     });
@@ -133,6 +138,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "x",
       ville: "x",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [],
     });
@@ -156,6 +162,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "avant",
       ville: "x",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [],
     });
@@ -173,6 +180,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       });
@@ -197,6 +205,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       });
@@ -212,6 +221,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       });
@@ -230,6 +240,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "x",
       ville: "x",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [],
     });
@@ -259,6 +270,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "x",
       ville: villeUnique,
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [],
     });
@@ -279,6 +291,7 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "x",
       ville: "x",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       dureeEstimeeMin: 60,
       technicienIds: [],
     });
@@ -292,7 +305,7 @@ describe("module Interventions (intégration réelle)", () => {
     }
   });
 
-  it("planningDuJour groupe les interventions par technicien", async () => {
+  it("planningDuJour groupe les interventions par technicien ET par véhicule", async () => {
     const date = new Date("2027-03-01T12:00:00Z");
     const intervention = await creerIntervention({
       clientId,
@@ -300,15 +313,39 @@ describe("module Interventions (intégration réelle)", () => {
       adresse: "x",
       ville: "x",
       priorite: "NORMALE",
+      canal: "TELEPHONE",
       datePlanifiee: date,
       dureeEstimeeMin: 60,
+      vehiculeId,
       technicienIds: [technicienId],
     });
     idsInterventions.push(intervention.id);
 
     const planning = await planningDuJour(date);
-    expect(planning[technicienId]).toBeDefined();
-    expect(planning[technicienId].some((i) => i.id === intervention.id)).toBe(true);
+    expect(planning.parTechnicien[technicienId]).toBeDefined();
+    expect(planning.parTechnicien[technicienId].some((i) => i.id === intervention.id)).toBe(true);
+    expect(planning.parVehicule[vehiculeId]).toBeDefined();
+    expect(planning.parVehicule[vehiculeId].some((i) => i.id === intervention.id)).toBe(true);
+  });
+
+  it("planningDuJour range une intervention sans véhicule sous \"non_assigne\"", async () => {
+    const date = new Date("2027-03-02T12:00:00Z");
+    const intervention = await creerIntervention({
+      clientId,
+      type: "VIDANGE",
+      adresse: "x",
+      ville: "x",
+      priorite: "NORMALE",
+      canal: "TELEPHONE",
+      datePlanifiee: date,
+      dureeEstimeeMin: 60,
+      technicienIds: [],
+    });
+    idsInterventions.push(intervention.id);
+
+    const planning = await planningDuJour(date);
+    expect(planning.parVehicule.non_assigne.some((i) => i.id === intervention.id)).toBe(true);
+    expect(planning.parTechnicien.non_assigne.some((i) => i.id === intervention.id)).toBe(true);
   });
 
   describe("filtre nonFacturees — \"Facturé\" n'est pas un statut, c'est calculé", () => {
@@ -323,6 +360,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       });
@@ -338,6 +376,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       });
@@ -364,6 +403,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [],
       });
@@ -394,6 +434,7 @@ describe("module Interventions (intégration réelle)", () => {
         adresse: "x",
         ville: "x",
         priorite: "NORMALE",
+        canal: "TELEPHONE",
         dureeEstimeeMin: 60,
         technicienIds: [technicienId],
       });
@@ -410,6 +451,77 @@ describe("module Interventions (intégration réelle)", () => {
       const compteAutre = await compterInterventionsNonFacturees(autreTechnicienScope);
       expect(compteAssigne).toBeGreaterThanOrEqual(1);
       expect(compteAutre).toBe(0);
+    });
+  });
+
+  describe("canal d'origine (WEB/TELEPHONE/TERRAIN)", () => {
+    it("TELEPHONE par défaut si non précisé, respecté sinon", async () => {
+      const parDefaut = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        canal: "TELEPHONE",
+        dureeEstimeeMin: 60,
+        technicienIds: [],
+      });
+      idsInterventions.push(parDefaut.id);
+      expect(parDefaut.canal).toBe("TELEPHONE");
+
+      const web = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        canal: "WEB",
+        dureeEstimeeMin: 60,
+        technicienIds: [],
+      });
+      idsInterventions.push(web.id);
+      expect(web.canal).toBe("WEB");
+    });
+
+    it("listerInterventions filtre par canal", async () => {
+      const terrain = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        canal: "TERRAIN",
+        dureeEstimeeMin: 60,
+        technicienIds: [],
+      });
+      idsInterventions.push(terrain.id);
+
+      const { data } = await listerInterventions({ page: 1, limit: 100, canal: "TERRAIN" }, admin);
+      expect(data.every((i) => i.canal === "TERRAIN")).toBe(true);
+      expect(data.some((i) => i.id === terrain.id)).toBe(true);
+    });
+
+    it("statsParCanal compte par canal sur la fenêtre donnée", async () => {
+      const web = await creerIntervention({
+        clientId,
+        type: "VIDANGE",
+        adresse: "x",
+        ville: "x",
+        priorite: "NORMALE",
+        canal: "WEB",
+        dureeEstimeeMin: 60,
+        technicienIds: [],
+      });
+      idsInterventions.push(web.id);
+
+      const hier = new Date(Date.now() - 86_400_000);
+      const stats = await statsParCanal(hier);
+      expect(stats.WEB).toBeGreaterThanOrEqual(1);
+
+      // Une fenêtre qui commence dans le futur ne peut rien compter.
+      const demain = new Date(Date.now() + 86_400_000);
+      const statsVides = await statsParCanal(demain);
+      expect(statsVides.WEB ?? 0).toBe(0);
     });
   });
 });

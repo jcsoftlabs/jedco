@@ -41,6 +41,7 @@ export default function NouvelleInterventionForm({
       adresse: fd.get("adresse"),
       ville: fd.get("ville"),
       priorite: fd.get("priorite"),
+      canal: fd.get("canal"),
       dureeEstimeeMin: Number(fd.get("dureeEstimeeMin")),
       ...(datePlanifiee ? { datePlanifiee: new Date(String(datePlanifiee)).toISOString() } : {}),
       ...(vehiculeId ? { vehiculeId } : {}),
@@ -115,10 +116,22 @@ export default function NouvelleInterventionForm({
         className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
       />
 
-      <select name="priorite" defaultValue="NORMALE" className="w-full rounded border border-slate-300 px-3 py-2 text-sm">
-        <option value="NORMALE">Normale</option>
-        <option value="URGENTE">Urgente</option>
-      </select>
+      <div className="flex gap-3">
+        <select name="priorite" defaultValue="NORMALE" className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm">
+          <option value="NORMALE">Normale</option>
+          <option value="URGENTE">Urgente</option>
+        </select>
+        <select
+          name="canal"
+          defaultValue="TELEPHONE"
+          title="Comment la demande est arrivée jusqu'à JEDCO"
+          className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+        >
+          <option value="TELEPHONE">Par téléphone</option>
+          <option value="WEB">Depuis le site web</option>
+          <option value="TERRAIN">Constatée sur le terrain</option>
+        </select>
+      </div>
 
       <div className="flex gap-3">
         <div className="flex-1">

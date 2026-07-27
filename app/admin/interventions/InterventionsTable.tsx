@@ -9,6 +9,7 @@ type Intervention = {
   type: string;
   statut: string;
   priorite: string;
+  canal: string;
   ville: string;
   datePlanifiee: string | null;
   client: { nom: string };
@@ -41,6 +42,15 @@ export default function InterventionsTable({ interventions }: { interventions: I
             param: "nonFacturees",
             options: [{ valeur: "true", label: "Terminées non facturées" }],
           },
+          {
+            label: "Canal",
+            param: "canal",
+            options: [
+              { valeur: "WEB", label: "Web" },
+              { valeur: "TELEPHONE", label: "Téléphone" },
+              { valeur: "TERRAIN", label: "Terrain" },
+            ],
+          },
         ]}
       />
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -50,6 +60,7 @@ export default function InterventionsTable({ interventions }: { interventions: I
               <th className="py-3 px-4 font-medium">Référence</th>
               <th className="px-4 font-medium">Client</th>
               <th className="px-4 font-medium">Type</th>
+              <th className="px-4 font-medium">Canal</th>
               <th className="px-4 font-medium">Ville</th>
               <th className="px-4 font-medium">Véhicule</th>
               <th className="px-4 font-medium">Planifiée</th>
@@ -63,7 +74,7 @@ export default function InterventionsTable({ interventions }: { interventions: I
             ))}
             {interventions.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-8 px-4 text-center text-slate-400">
+                <td colSpan={9} className="py-8 px-4 text-center text-slate-400">
                   Aucune intervention ne correspond à cette recherche.
                 </td>
               </tr>

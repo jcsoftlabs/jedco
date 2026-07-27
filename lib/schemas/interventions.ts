@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { typeServiceSchema, prioriteSchema, statutInterventionSchema } from "@/lib/schemas/enums";
+import { typeServiceSchema, prioriteSchema, statutInterventionSchema, canalDemandeSchema } from "@/lib/schemas/enums";
 
-export { typeServiceSchema, prioriteSchema, statutInterventionSchema };
+export { typeServiceSchema, prioriteSchema, statutInterventionSchema, canalDemandeSchema };
 
 const DUREE_MAX_MIN = 24 * 60;
 
@@ -13,6 +13,10 @@ export const creerInterventionSchema = z.object({
   adresse: z.string().trim().min(1).max(500),
   ville: z.string().trim().min(1).max(100),
   priorite: prioriteSchema.default("NORMALE"),
+  // TELEPHONE par défaut, cohérent avec la colonne en base (voir le
+  // commentaire sur Intervention.canal dans schema.prisma) : la plupart des
+  // interventions saisies par le personnel démarrent par un appel.
+  canal: canalDemandeSchema.default("TELEPHONE"),
   datePlanifiee: z.coerce.date().optional(),
   dureeEstimeeMin: z.coerce.number().int().positive().max(DUREE_MAX_MIN).default(60),
   vehiculeId: z.string().optional(),
@@ -24,6 +28,7 @@ export const modifierInterventionSchema = z.object({
   adresse: z.string().trim().min(1).max(500).optional(),
   ville: z.string().trim().min(1).max(100).optional(),
   priorite: prioriteSchema.optional(),
+  canal: canalDemandeSchema.optional(),
   datePlanifiee: z.coerce.date().nullable().optional(),
   dureeEstimeeMin: z.coerce.number().int().positive().max(DUREE_MAX_MIN).optional(),
   vehiculeId: z.string().nullable().optional(),
@@ -52,6 +57,7 @@ export const listeInterventionsSchema = z.object({
   ville: z.string().optional(),
   technicienId: z.string().optional(),
   date: z.coerce.date().optional(),
+  canal: canalDemandeSchema.optional(),
   // Terminées mais sans facture liée — pas un statut à part entière (voir
   // lib/services/interventions.ts), un filtre calculé sur ce qui existe déjà.
   nonFacturees: z
