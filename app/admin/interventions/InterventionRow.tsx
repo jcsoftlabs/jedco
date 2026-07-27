@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const TRANSITIONS: Record<string, string[]> = {
@@ -71,7 +72,11 @@ export default function InterventionRow({
 
   return (
     <tr className="border-b border-slate-100 last:border-0 align-top">
-      <td className="py-2 px-4 font-mono text-xs">{intervention.reference}</td>
+      <td className="py-2 px-4 font-mono text-xs">
+        <Link href={`/admin/interventions/${intervention.id}`} className="text-jedco hover:underline">
+          {intervention.reference}
+        </Link>
+      </td>
       <td className="px-4">{intervention.client.nom}</td>
       <td className="px-4">{intervention.type}</td>
       <td className="px-4 text-slate-500">{LIBELLE_CANAL[intervention.canal] ?? intervention.canal}</td>
