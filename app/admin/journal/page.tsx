@@ -57,7 +57,7 @@ export default async function JournalPage({
             {entrees.map((e) => (
               <tr key={e.id}>
                 <td className="whitespace-nowrap px-4 py-3 text-slate-500">
-                  {e.createdAt.toLocaleString("fr-FR")}
+                  {e.createdAt.toLocaleString("fr-FR", { hour12: true })}
                 </td>
                 <td className="px-4 py-3 text-slate-700">
                   {e.user ? (

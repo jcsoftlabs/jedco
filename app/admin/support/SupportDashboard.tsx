@@ -175,7 +175,7 @@ export default function SupportDashboard() {
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
                     {c.telephone && `${c.telephone} · `}
-                    {new Date(c.updatedAt).toLocaleTimeString("fr-FR")}
+                    {new Date(c.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", hour12: true })}
                   </p>
                 </button>
               ))}
@@ -203,7 +203,7 @@ export default function SupportDashboard() {
                   <p className="truncate text-xs text-slate-500">{c.messages.at(-1)?.contenu.slice(0, 60)}</p>
                   <p className="mt-1 text-xs text-slate-400">
                     {c.telephone && `${c.telephone} · `}
-                    {new Date(c.updatedAt).toLocaleTimeString("fr-FR")}
+                    {new Date(c.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", hour12: true })}
                   </p>
                 </button>
               ))}

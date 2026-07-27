@@ -99,7 +99,7 @@ export default function InterventionTerrainCard({
           </p>
         )}
         {intervention.datePlanifiee && (
-          <p>Planifiée : {new Date(intervention.datePlanifiee).toLocaleString("fr-FR")}</p>
+          <p>Planifiée : {new Date(intervention.datePlanifiee).toLocaleString("fr-FR", { hour12: true })}</p>
         )}
         {intervention.vehicule && <p>Véhicule : {intervention.vehicule.immatriculation}</p>}
         {intervention.description && <p className="italic text-slate-500">{intervention.description}</p>}

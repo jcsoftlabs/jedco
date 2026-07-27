@@ -71,7 +71,13 @@ export default function RendezVousRow({
           <p className="font-semibold text-jedco-dark">{rdv.nom}</p>
           <p className="text-xs text-slate-500">
             Rendez-vous souhaité le{" "}
-            <strong>{new Date(rdv.dateVoulue).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}</strong>
+            <strong>
+              {new Date(rdv.dateVoulue).toLocaleString("fr-FR", {
+                dateStyle: "medium",
+                timeStyle: "short",
+                hour12: true,
+              })}
+            </strong>
           </p>
         </div>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${COULEURS_STATUT[rdv.statut]}`}>

@@ -232,7 +232,12 @@ export default function NotificationsCloche() {
                     >
                       <p className="font-medium text-jedco-dark">{r.nom}</p>
                       <p className="text-xs text-slate-500">
-                        Souhaité le {new Date(r.dateVoulue).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" })}
+                        Souhaité le{" "}
+                        {new Date(r.dateVoulue).toLocaleString("fr-FR", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                          hour12: true,
+                        })}
                       </p>
                     </button>
                   </li>

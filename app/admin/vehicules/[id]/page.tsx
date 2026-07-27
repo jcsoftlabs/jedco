@@ -92,7 +92,7 @@ export default async function VehiculeDetailPage({ params }: { params: Promise<{
                 <span className="font-mono text-xs text-slate-400">{i.reference}</span>
                 <span>{i.client.nom}</span>
                 <span className="text-slate-400">
-                  {i.datePlanifiee ? new Date(i.datePlanifiee).toLocaleString("fr-FR") : "non planifiée"}
+                  {i.datePlanifiee ? new Date(i.datePlanifiee).toLocaleString("fr-FR", { hour12: true }) : "non planifiée"}
                 </span>
                 <span className="text-slate-400">{i.statut}</span>
               </li>

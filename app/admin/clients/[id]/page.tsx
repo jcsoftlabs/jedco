@@ -175,7 +175,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                   par {entree.user.prenom} {entree.user.nom}
                 </span>
               )}
-              <span className="text-slate-400"> — {entree.createdAt.toLocaleString("fr-FR")}</span>
+              <span className="text-slate-400"> — {entree.createdAt.toLocaleString("fr-FR", { hour12: true })}</span>
             </li>
           ))}
           {journal.length === 0 && <li className="text-sm text-slate-400">Aucune modification enregistrée.</li>}

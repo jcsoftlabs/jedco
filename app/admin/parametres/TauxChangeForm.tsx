@@ -105,7 +105,7 @@ export default function TauxChangeForm({
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
               {misAJourLe
-                ? `Dernière mise à jour : ${new Date(misAJourLe).toLocaleString("fr-FR")}`
+                ? `Dernière mise à jour : ${new Date(misAJourLe).toLocaleString("fr-FR", { hour12: true })}`
                 : "Date de mise à jour inconnue"}
             </p>
           </>

@@ -61,7 +61,7 @@ export default function TachesPanel({
         {derniereExecution ? (
           <>
             <p className="text-sm font-medium text-jedco-dark">
-              Dernière exécution : {new Date(derniereExecution.date).toLocaleString("fr-FR")}
+              Dernière exécution : {new Date(derniereExecution.date).toLocaleString("fr-FR", { hour12: true })}
               <span className="ml-2 text-xs font-normal text-slate-500">
                 ({derniereExecution.declencheur === "manuel" ? "manuelle" : "automatique"})
               </span>

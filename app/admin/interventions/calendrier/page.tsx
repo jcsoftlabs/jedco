@@ -33,7 +33,11 @@ function CarteIntervention({ intervention }: { intervention: InterventionPlannin
     >
       <p className="font-mono font-semibold text-jedco-dark">
         {intervention.datePlanifiee
-          ? new Date(intervention.datePlanifiee).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+          ? new Date(intervention.datePlanifiee).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })
           : "—"}
       </p>
       <p className="mt-0.5 truncate font-medium text-slate-700">{intervention.client.nom}</p>

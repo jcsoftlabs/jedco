@@ -82,7 +82,7 @@ export default function DemandeRow({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-jedco-dark">{demande.nom}</p>
-          <p className="text-xs text-slate-500">{new Date(demande.createdAt).toLocaleString("fr-FR")}</p>
+          <p className="text-xs text-slate-500">{new Date(demande.createdAt).toLocaleString("fr-FR", { hour12: true })}</p>
         </div>
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${

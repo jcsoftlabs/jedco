@@ -78,7 +78,7 @@ export default function InterventionRow({
       <td className="px-4">{intervention.ville}</td>
       <td className="px-4">{intervention.vehicule?.immatriculation ?? "—"}</td>
       <td className="px-4">
-        {intervention.datePlanifiee ? new Date(intervention.datePlanifiee).toLocaleString("fr-FR") : "—"}
+        {intervention.datePlanifiee ? new Date(intervention.datePlanifiee).toLocaleString("fr-FR", { hour12: true }) : "—"}
       </td>
       <td className="px-4">
         <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${COULEUR_STATUT[statut]}`}>
