@@ -76,7 +76,11 @@ export default async function ContratsPage({
           <tbody>
             {contrats.map((c) => (
               <tr key={c.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 px-4 font-mono text-xs">{c.reference}</td>
+                <td className="py-2 px-4 font-mono text-xs">
+                  <Link href={`/admin/contrats/${c.id}`} className="text-jedco hover:underline">
+                    {c.reference}
+                  </Link>
+                </td>
                 <td className="px-4">
                   <Link href={`/admin/clients/${c.clientId}`} className="text-jedco hover:underline">
                     {c.client.nom}
