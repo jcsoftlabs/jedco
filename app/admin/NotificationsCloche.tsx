@@ -39,6 +39,12 @@ type InterventionNonFacturee = {
   client: { nom: string };
 };
 
+type ConversationEnAttente = {
+  id: string;
+  nom: string | null;
+  updatedAt: string;
+};
+
 export default function NotificationsCloche() {
   const router = useRouter();
   const [ouvert, setOuvert] = useState(false);
@@ -51,6 +57,7 @@ export default function NotificationsCloche() {
   const [totalContrats, setTotalContrats] = useState(0);
   const [nonFacturees, setNonFacturees] = useState<InterventionNonFacturee[]>([]);
   const [totalNonFacturees, setTotalNonFacturees] = useState(0);
+  const [conversationsEnAttente, setConversationsEnAttente] = useState<ConversationEnAttente[]>([]);
   const conteneurRef = useRef<HTMLDivElement>(null);
 
   async function verifier() {
@@ -113,6 +120,18 @@ export default function NotificationsCloche() {
     } catch {
       // Silencieux, même raison.
     }
+
+    try {
+      // /api/support/conversations exige ADMIN ou SUPPORT (pas SUPERVISEUR)
+      // — un 403 pour un superviseur est attendu, pas une erreur : il ne
+      // verra simplement pas cette section, comme prévu par l'échec
+      // silencieux déjà en place pour les autres sources ci-dessus.
+      const res = await fetch("/api/support/conversations");
+      const data = await res.json();
+      if (data.success) setConversationsEnAttente(data.data.enAttente);
+    } catch {
+      // Silencieux, même raison.
+    }
   }
 
   useEffect(() => {
@@ -158,11 +177,17 @@ export default function NotificationsCloche() {
     router.push("/admin/interventions?nonFacturees=true");
   }
 
-  // Un seul badge numérique, cinq sources : la cloche répond à « ai-je
+  function ouvrirSupport() {
+    setOuvert(false);
+    router.push("/admin/support");
+  }
+
+  // Un seul badge numérique, six sources : la cloche répond à « ai-je
   // quelque chose à traiter ? », pas « combien de types de choses ». Séparer
   // les compteurs en plusieurs badges aurait forcé l'admin à faire l'addition
   // lui-même pour savoir s'il y a urgence.
-  const totalCombine = total + entretiens.length + totalRdv + totalContrats + totalNonFacturees;
+  const totalCombine =
+    total + entretiens.length + totalRdv + totalContrats + totalNonFacturees + conversationsEnAttente.length;
 
   return (
     <div ref={conteneurRef} className="relative ml-auto">
@@ -184,6 +209,44 @@ export default function NotificationsCloche() {
 
       {ouvert && (
         <div className="absolute right-0 z-40 mt-2 w-80 rounded-lg border border-slate-200 bg-white shadow-lg">
+          {conversationsEnAttente.length > 0 && (
+            <>
+              <div className="flex items-center justify-between border-b border-slate-100 bg-red-50 px-4 py-2.5">
+                <span className="text-sm font-semibold text-red-800">Client en attente d&apos;un agent</span>
+                <span className="text-xs text-red-600">{conversationsEnAttente.length}</span>
+              </div>
+              <ul className="max-h-60 overflow-y-auto">
+                {conversationsEnAttente.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      onClick={ouvrirSupport}
+                      className="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                    >
+                      <p className="font-medium text-jedco-dark">{c.nom ?? "Visiteur anonyme"}</p>
+                      <p className="text-xs text-slate-500">
+                        Depuis{" "}
+                        {new Date(c.updatedAt).toLocaleString("fr-FR", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                          hour12: true,
+                        })}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-slate-100 px-4 py-2">
+                <Link
+                  href="/admin/support"
+                  onClick={() => setOuvert(false)}
+                  className="text-xs font-medium text-jedco hover:underline"
+                >
+                  Voir toutes les conversations
+                </Link>
+              </div>
+            </>
+          )}
+
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
             <span className="text-sm font-semibold text-jedco-dark">Nouvelles demandes</span>
             {total > 0 && <span className="text-xs text-slate-400">{total} non traitée{total > 1 ? "s" : ""}</span>}

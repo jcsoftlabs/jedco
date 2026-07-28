@@ -6,12 +6,16 @@ import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
 import NotificationsCloche from "./NotificationsCloche";
 import SessionKeepAlive from "./SessionKeepAlive";
+import SupportBadge from "./SupportBadge";
 
 // `adminSeul` : le lien apparaît pour ADMIN mais pas pour SUPERVISEUR, qui
 // partage par ailleurs la même navigation. Sans ce filtre, un superviseur
 // verrait un lien qui le renvoie aussitôt au tableau de bord (la page fait
 // requireRole ADMIN) — un cul-de-sac plutôt qu'une fonctionnalité.
-type Lien = { href: string; label: string; icone: React.ReactNode; adminSeul?: boolean };
+// `badge` : contenu affiché à droite du libellé — seul repère pour un
+// compte SUPPORT, qui n'a pas la cloche de notifications (ADMIN/SUPERVISEUR
+// uniquement, voir plus bas).
+type Lien = { href: string; label: string; icone: React.ReactNode; adminSeul?: boolean; badge?: React.ReactNode };
 
 // Pages atteignables sans figurer dans la navigation latérale : le titre de
 // l'en-tête les cherche ici, sinon il retomberait sur « Backoffice ».
@@ -71,7 +75,7 @@ const LIENS_ADMIN: Lien[] = [
   { href: "/admin/catalogue", label: "Catalogue", icone: <Icone d={I.catalogue} /> },
   { href: "/admin/galerie", label: "Galerie", icone: <Icone d={I.galerie} /> },
   { href: "/admin/temoignages", label: "Témoignages", icone: <Icone d={I.temoignages} /> },
-  { href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> },
+  { href: "/admin/support", label: "Support", icone: <Icone d={I.support} />, badge: <SupportBadge /> },
   { href: "/admin/utilisateurs", label: "Utilisateurs", icone: <Icone d={I.utilisateurs} />, adminSeul: true },
   { href: "/admin/journal", label: "Journal d'audit", icone: <Icone d={I.journal} />, adminSeul: true },
   { href: "/admin/parametres", label: "Paramètres", icone: <Icone d={I.parametres} /> },
@@ -89,7 +93,7 @@ const LIENS_TECHNICIEN: Lien[] = [
 // Un SUPPORT (réceptionniste) n'a accès qu'au tableau de bord des
 // conversations — jamais aux modules métier (factures, clients, etc.).
 const LIENS_SUPPORT: Lien[] = [
-  { href: "/admin/support", label: "Support", icone: <Icone d={I.support} /> },
+  { href: "/admin/support", label: "Support", icone: <Icone d={I.support} />, badge: <SupportBadge /> },
   { href: "/admin/manuel", label: "Manuel", icone: <Icone d={I.manuel} /> },
 ];
 
@@ -127,6 +131,10 @@ function ContenuLienNav({ lien, compact }: { lien: Lien; compact: boolean }) {
     <>
       {pending ? <Spinner className="h-5 w-5" /> : lien.icone}
       {!compact && <span className="truncate">{lien.label}</span>}
+      {/* Repli (compact) : le badge ne rendrait rien de lisible sans le
+          libellé à côté duquel se placer — l'admin doit déplier la barre
+          pour le voir, la cloche reste le repère permanent en repli. */}
+      {!compact && lien.badge}
     </>
   );
 }
