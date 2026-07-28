@@ -1,9 +1,26 @@
 import { redirect } from "next/navigation";
 import { clientCourant } from "@/lib/auth/current-client";
 import { documentsClient } from "@/lib/services/auth-client";
+import { listerTypesService } from "@/lib/services/types-reference";
 import { formatHTG } from "@/lib/money";
 import DeconnexionButton from "./DeconnexionButton";
 import DocumentPreviewButton from "./DocumentPreviewButton";
+
+const LIBELLE_STATUT_INTERVENTION: Record<string, string> = {
+  EN_ATTENTE: "En attente",
+  PLANIFIE: "Planifiée",
+  EN_COURS: "En cours",
+  COMPLETE: "Terminée",
+  ANNULE: "Annulée",
+};
+
+const COULEUR_STATUT_INTERVENTION: Record<string, string> = {
+  EN_ATTENTE: "bg-slate-100 text-slate-700",
+  PLANIFIE: "bg-blue-100 text-blue-700",
+  EN_COURS: "bg-amber-100 text-amber-700",
+  COMPLETE: "bg-emerald-100 text-emerald-700",
+  ANNULE: "bg-slate-200 text-slate-500",
+};
 
 const COULEUR_STATUT_FACTURE: Record<string, string> = {
   EN_ATTENTE: "bg-slate-100 text-slate-700",
@@ -26,7 +43,11 @@ export default async function EspaceClientPage() {
   const client = await clientCourant();
   if (!client) redirect("/espace-client/connexion");
 
-  const { factures, devis } = await documentsClient(client.id);
+  const [{ factures, devis, interventions }, typesService] = await Promise.all([
+    documentsClient(client.id),
+    listerTypesService(),
+  ]);
+  const libellesService = Object.fromEntries(typesService.map((t) => [t.code, t.libelle]));
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -41,6 +62,50 @@ export default async function EspaceClientPage() {
       </header>
 
       <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <section>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Historique des services</h2>
+          {interventions.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-400">
+              Aucun service enregistré pour l&apos;instant.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Référence</th>
+                    <th className="px-4 py-3">Service</th>
+                    <th className="px-4 py-3">Ville</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {interventions.map((i) => (
+                    <tr key={i.id}>
+                      <td className="px-4 py-3 font-medium text-jedco-dark">{i.reference}</td>
+                      <td className="px-4 py-3 text-slate-600">{libellesService[i.type] ?? i.type}</td>
+                      <td className="px-4 py-3 text-slate-500">{i.ville}</td>
+                      <td className="px-4 py-3 text-slate-500">
+                        {(i.dateExecution ?? i.datePlanifiee)
+                          ? new Date(i.dateExecution ?? i.datePlanifiee!).toLocaleDateString("fr-FR")
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${COULEUR_STATUT_INTERVENTION[i.statut]}`}
+                        >
+                          {LIBELLE_STATUT_INTERVENTION[i.statut] ?? i.statut}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Mes factures</h2>
           {factures.length === 0 ? (

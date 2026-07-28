@@ -119,9 +119,10 @@ describe("authentification portail client (intégration réelle)", () => {
     const client = await creerClientTest();
     const autreClient = await creerClientTest();
 
-    const { factures, devis } = await documentsClient(client.id);
+    const { factures, devis, interventions } = await documentsClient(client.id);
     expect(factures).toEqual([]);
     expect(devis).toEqual([]);
+    expect(interventions).toEqual([]);
 
     const { factures: facturesAutre } = await documentsClient(autreClient.id);
     expect(facturesAutre).toEqual([]);

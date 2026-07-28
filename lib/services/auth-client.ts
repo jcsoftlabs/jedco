@@ -109,10 +109,11 @@ export async function verifierCodeConnexion(
   return creerSessionClient(client.id, meta);
 }
 
-// Historique du client connecté — factures et devis, du plus récent au plus
-// ancien. Pas de pagination : le volume par client reste faible en pratique.
+// Historique du client connecté — factures, devis et interventions, du plus
+// récent au plus ancien. Pas de pagination : le volume par client reste
+// faible en pratique.
 export async function documentsClient(clientId: string) {
-  const [factures, devis] = await Promise.all([
+  const [factures, devis, interventions] = await Promise.all([
     prisma.facture.findMany({
       where: { clientId, deletedAt: null },
       orderBy: { dateEmission: "desc" },
@@ -137,7 +138,24 @@ export async function documentsClient(clientId: string) {
         dateValidite: true,
       },
     }),
+    // Le client voit le SERVICE rendu (ce qui a été fait chez lui), pas le
+    // détail opérationnel interne : ni le technicien assigné, ni le
+    // véhicule, ni les photos/la signature du rapport — ces informations
+    // restent réservées au backoffice (voir /admin/interventions/[id]).
+    prisma.intervention.findMany({
+      where: { clientId, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        reference: true,
+        type: true,
+        statut: true,
+        ville: true,
+        datePlanifiee: true,
+        dateExecution: true,
+      },
+    }),
   ]);
 
-  return { factures, devis };
+  return { factures, devis, interventions };
 }
