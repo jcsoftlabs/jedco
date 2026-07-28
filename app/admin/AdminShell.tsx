@@ -5,6 +5,7 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
 import NotificationsCloche from "./NotificationsCloche";
+import SessionKeepAlive from "./SessionKeepAlive";
 
 // `adminSeul` : le lien apparaît pour ADMIN mais pas pour SUPERVISEUR, qui
 // partage par ailleurs la même navigation. Sans ce filtre, un superviseur
@@ -218,6 +219,7 @@ export default function AdminShell({
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <SessionKeepAlive />
       {/* ─── Barre latérale, écrans larges ─── */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden flex-col bg-jedco-dark transition-[width] duration-200 lg:flex ${

@@ -61,6 +61,21 @@ export async function validerSession(token: string | undefined | null) {
   return session;
 }
 
+// Fenêtre glissante : tant qu'un admin utilise activement le backoffice, sa
+// session ne doit jamais expirer toute seule — seule une déconnexion
+// manuelle (ou une vraie inactivité de plus de DUREE_SESSION_MS) y met fin.
+// Appelé périodiquement depuis le client (voir SessionKeepAlive), qui
+// repousse aussi le cookie côté navigateur — sans ça, le cookie lui-même
+// expirerait à sa date d'origine même si la session en base est prolongée.
+export async function renouvelerSession(token: string | undefined | null): Promise<boolean> {
+  if (!token) return false;
+  const resultat = await prisma.session.updateMany({
+    where: { tokenHash: hacherToken(token), revokedAt: null, expiresAt: { gt: new Date() } },
+    data: { expiresAt: new Date(Date.now() + DUREE_SESSION_MS) },
+  });
+  return resultat.count > 0;
+}
+
 export async function revoquerSession(token: string | undefined | null): Promise<void> {
   if (!token) return;
   // updateMany plutôt que update : ne lève pas si le token n'existe déjà plus
