@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { jouerBip } from "@/lib/notifications-audio";
 
 const INTERVALLE_POLL_MS = 4_000;
 
@@ -15,27 +16,6 @@ type Conversation = {
   updatedAt: string;
   messages: Message[];
 };
-
-// Bip généré par synthèse (oscillateur Web Audio) plutôt qu'un fichier audio
-// externe — pas de fichier statique à héberger, et fonctionne partout sans
-// dépendance réseau.
-function jouerBip() {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = 880;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.4);
-  } catch {
-    // Certains navigateurs bloquent AudioContext avant toute interaction —
-    // tant pis pour le son, la liste visuelle reste à jour de toute façon.
-  }
-}
 
 function libelleRole(role: Message["role"]): string {
   if (role === "VISITEUR") return "Visiteur";
