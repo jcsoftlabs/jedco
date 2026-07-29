@@ -21,6 +21,16 @@ export default function Footer() {
           <p><span className="font-semibold text-white">Téléphones</span> — 2942-1109 / 2942-1110</p>
           <p><span className="font-semibold text-white">Adresse</span> — 14 Rue Pélican, Route de l&apos;Aéroport, Port-au-Prince</p>
         </div>
+        <div className="mt-8 border-t border-white/10 pt-4 text-center text-xs text-blue-300">
+          <a
+            href="https://codeshell-green.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white hover:underline"
+          >
+            JEDCO ERP developed by Christopher JEROME
+          </a>
+        </div>
       </div>
     </footer>
   );

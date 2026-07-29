@@ -222,6 +222,16 @@ export default function AdminShell({
       <div className={`mt-3 ${compact ? "flex justify-center" : ""}`}>
         <LogoutButton />
       </div>
+      {!compact && (
+        <a
+          href="https://codeshell-green.vercel.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 block text-center text-[11px] text-slate-500 hover:text-slate-300 hover:underline"
+        >
+          JEDCO ERP developed by Christopher JEROME
+        </a>
+      )}
     </div>
   );
 
