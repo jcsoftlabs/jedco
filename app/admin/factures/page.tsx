@@ -6,6 +6,8 @@ import { statutFactureSchema } from "@/lib/schemas/factures";
 import { listerClientsPourSelection } from "@/lib/services/clients";
 import { listerCatalogue } from "@/lib/services/catalogue";
 import { formatHTG } from "@/lib/money";
+import { prisma } from "@/lib/db";
+import Link from "next/link";
 import NouvelleFactureForm from "./NouvelleFactureForm";
 import FacturesTable from "./FacturesTable";
 import Pager, { TAILLE_PAGE_DEFAUT } from "../Pager";
@@ -15,6 +17,7 @@ export default async function FacturesPage({
 }: {
   searchParams: Promise<{
     clientId?: string;
+    toiletteMobileId?: string;
     page?: string;
     q?: string;
     statut?: string;
@@ -31,8 +34,15 @@ export default async function FacturesPage({
     throw e;
   }
 
-  const { clientId, page: pageParam, q, statut, dateDebut: dateDebutParam, dateFin: dateFinParam } =
-    await searchParams;
+  const {
+    clientId,
+    toiletteMobileId,
+    page: pageParam,
+    q,
+    statut,
+    dateDebut: dateDebutParam,
+    dateFin: dateFinParam,
+  } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const statutValide = statutFactureSchema.safeParse(statut).data;
   // new Date("2026-13-40") produit un objet Invalid Date plutôt que de lever
@@ -43,16 +53,39 @@ export default async function FacturesPage({
   const dateFin =
     dateFinParam && !Number.isNaN(new Date(dateFinParam).getTime()) ? new Date(dateFinParam) : undefined;
 
-  const [{ data: factures, meta }, clients, stats, catalogue] = await Promise.all([
-    listerFactures({ page, limit: TAILLE_PAGE_DEFAUT, search: q, statut: statutValide, dateDebut, dateFin }),
+  const [{ data: factures, meta }, clients, stats, catalogue, toiletteFiltree] = await Promise.all([
+    listerFactures({
+      page,
+      limit: TAILLE_PAGE_DEFAUT,
+      search: q,
+      statut: statutValide,
+      dateDebut,
+      dateFin,
+      toiletteMobileId,
+    }),
     listerClientsPourSelection(),
     totauxFactures(),
     listerCatalogue({ actif: true }),
+    toiletteMobileId
+      ? prisma.toiletteMobile.findUnique({ where: { id: toiletteMobileId }, select: { code: true } })
+      : Promise.resolve(null),
   ]);
 
   return (
     <div className="max-w-6xl space-y-6">
       <h2 className="text-2xl font-bold text-jedco-dark">Facturation</h2>
+
+      {toiletteMobileId && (
+        <div className="flex items-center justify-between rounded-lg border border-jedco/30 bg-jedco/5 px-4 py-2.5 text-sm">
+          <span className="text-jedco-dark">
+            Filtré sur les factures de la toilette mobile{" "}
+            <strong>{toiletteFiltree?.code ?? toiletteMobileId}</strong>
+          </span>
+          <Link href="/admin/factures" className="text-xs font-medium text-jedco hover:underline">
+            Retirer le filtre
+          </Link>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -107,7 +140,7 @@ export default async function FacturesPage({
           limit={meta.limit}
           total={meta.total}
           basePath="/admin/factures"
-          searchParams={{ clientId, q, statut, dateDebut: dateDebutParam, dateFin: dateFinParam }}
+          searchParams={{ clientId, toiletteMobileId, q, statut, dateDebut: dateDebutParam, dateFin: dateFinParam }}
         />
       </div>
     </div>

@@ -21,6 +21,10 @@ export const demarrerLocationSchema = z.object({
   dateDebutLocation: z.coerce.date(),
   dateFinLocation: z.coerce.date().optional(),
   localisationActuelle: z.string().trim().max(200).optional(),
+  // En HTG (pas en centimes) — converti dans le service, même convention que
+  // montantHTG sur Contrat/Facture. Optionnel : une location peut rester
+  // facturée manuellement en ne renseignant jamais de tarif.
+  tarifMensuelHTG: z.number().positive().optional(),
 });
 
 export const listeToilettesSchema = z.object({

@@ -135,3 +135,84 @@ export async function genererFacturesRecurrentes(
     { timeout: 120_000, maxWait: 20_000 }
   );
 }
+
+// Même principe que genererFacturesRecurrentes ci-dessus, appliqué aux
+// locations de toilettes mobiles en cours (statut LOUEE) dont un tarif
+// mensuel a été renseigné au démarrage de la location — sans tarif, la
+// location reste facturée manuellement (voir démarrerLocation). Toujours
+// mensuel : une toilette louée n'a pas de type MENSUEL/TRIMESTRIEL/ANNUEL
+// comme un Contrat, juste une date de début et un tarif au mois.
+export async function genererFacturesLocationsToilettes(
+  maintenant: Date = new Date()
+): Promise<ResultatFacturationRecurrente> {
+  const periode = periodeCourante(maintenant);
+  const cleVerrou = `facturation-toilettes:${periode}`;
+
+  return prisma.$transaction(
+    async (tx) => {
+      const [{ verrouObtenu }] = await tx.$queryRaw<{ verrouObtenu: boolean }[]>`
+        SELECT pg_try_advisory_xact_lock(hashtext(${cleVerrou})) AS "verrouObtenu"
+      `;
+
+      if (!verrouObtenu) {
+        return { periode, genere: 0, ignore: true };
+      }
+
+      const toilettesLouees = await tx.toiletteMobile.findMany({
+        where: {
+          statut: "LOUEE",
+          deletedAt: null,
+          clientId: { not: null },
+          tarifMensuelHTG: { not: null },
+          dateDebutLocation: { lte: maintenant },
+        },
+      });
+
+      let genere = 0;
+      for (const toilette of toilettesLouees) {
+        // dateDebutLocation et tarifMensuelHTG sont garantis non-null par le
+        // where ci-dessus, mais Prisma ne l'infère pas sur le type retourné.
+        if (!toilette.dateDebutLocation || !toilette.tarifMensuelHTG || !toilette.clientId) continue;
+        if (moisEcoules(toilette.dateDebutLocation, maintenant) < 0) continue;
+
+        const dejaFacture = await tx.facture.findUnique({
+          where: { toiletteMobileId_periode: { toiletteMobileId: toilette.id, periode } },
+        });
+        if (dejaFacture) continue;
+
+        const reference = await referenceFacture();
+        const tauxUsdApplique = await tauxUsdCourantEncode();
+
+        await tx.facture.create({
+          data: {
+            reference,
+            clientId: toilette.clientId,
+            toiletteMobileId: toilette.id,
+            periode,
+            montantHTG: toilette.tarifMensuelHTG,
+            taxeHTG: 0n,
+            totalHTG: toilette.tarifMensuelHTG,
+            tauxUsdApplique,
+            dateEcheance: new Date(maintenant.getTime() + 30 * 86_400_000),
+            lignes: {
+              create: [
+                {
+                  description: `Location toilette mobile ${toilette.code} (${periode})`,
+                  service: "TOILETTE_MOBILE",
+                  quantite: 1,
+                  prixUnitaireHTG: toilette.tarifMensuelHTG,
+                  totalHTG: toilette.tarifMensuelHTG,
+                  ordre: 0,
+                },
+              ],
+            },
+          },
+        });
+        genere++;
+      }
+
+      return { periode, genere, ignore: false };
+    },
+    { timeout: 120_000, maxWait: 20_000 }
+  );
+}

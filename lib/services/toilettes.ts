@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { codeToilette } from "@/lib/codes";
 import { ErreurMetier } from "@/lib/errors";
+import { htgToCentimes } from "@/lib/money";
 import type { Prisma } from "@/app/generated/prisma/client";
 import type {
   CreerToiletteInput,
@@ -90,6 +91,7 @@ export async function demarrerLocation(id: string, input: DemarrerLocationInput)
       dateDebutLocation: input.dateDebutLocation,
       dateFinLocation: input.dateFinLocation,
       localisationActuelle: input.localisationActuelle ?? toilette.localisationActuelle,
+      tarifMensuelHTG: input.tarifMensuelHTG !== undefined ? htgToCentimes(input.tarifMensuelHTG) : null,
     },
     include: INCLUDE_CLIENT,
   });
@@ -108,7 +110,13 @@ export async function terminerLocation(id: string) {
 
   return prisma.toiletteMobile.update({
     where: { id },
-    data: { statut: "DISPONIBLE", clientId: null, dateDebutLocation: null, dateFinLocation: null },
+    data: {
+      statut: "DISPONIBLE",
+      clientId: null,
+      dateDebutLocation: null,
+      dateFinLocation: null,
+      tarifMensuelHTG: null,
+    },
   });
 }
 

@@ -1,4 +1,4 @@
-import { genererFacturesRecurrentes } from "@/lib/services/facturation-recurrente";
+import { genererFacturesRecurrentes, genererFacturesLocationsToilettes } from "@/lib/services/facturation-recurrente";
 import { marquerFacturesEnRetard } from "@/lib/services/factures";
 import { marquerContratsExpires } from "@/lib/services/contrats";
 import { envoyerRelancesImpayees } from "@/lib/services/relances-impayees";
@@ -67,6 +67,14 @@ export async function executerTachesQuotidiennes(
   taches.push(
     await executer("Facturation des contrats récurrents", async () => {
       const r = await genererFacturesRecurrentes(maintenant);
+      if (r.ignore) return `Période ${r.periode} : déjà en cours d'exécution ailleurs, ignorée`;
+      return `Période ${r.periode} : ${r.genere} facture(s) générée(s)`;
+    })
+  );
+
+  taches.push(
+    await executer("Facturation des locations de toilettes mobiles", async () => {
+      const r = await genererFacturesLocationsToilettes(maintenant);
       if (r.ignore) return `Période ${r.periode} : déjà en cours d'exécution ailleurs, ignorée`;
       return `Période ${r.periode} : ${r.genere} facture(s) générée(s)`;
     })

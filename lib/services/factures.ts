@@ -20,9 +20,9 @@ const INCLUDE_STANDARD = {
 // les mêmes filtres, sinon l'export d'une page filtrée ne correspondrait pas
 // à ce que l'admin a sous les yeux.
 async function construireWhereFactures(
-  params: Pick<ListeFacturesParams, "clientId" | "statut" | "dateDebut" | "dateFin" | "search">
+  params: Pick<ListeFacturesParams, "clientId" | "toiletteMobileId" | "statut" | "dateDebut" | "dateFin" | "search">
 ): Promise<Prisma.FactureWhereInput> {
-  const { clientId, statut, dateDebut, dateFin, search } = params;
+  const { clientId, toiletteMobileId, statut, dateDebut, dateFin, search } = params;
 
   // Voir listerClients pour le détail de l'approche (jointure Client pour
   // chercher aussi par nom, unaccent pour l'insensibilité aux accents).
@@ -48,6 +48,7 @@ async function construireWhereFactures(
   return {
     deletedAt: null,
     ...(clientId ? { clientId } : {}),
+    ...(toiletteMobileId ? { toiletteMobileId } : {}),
     ...(statut ? { statut } : {}),
     ...(idsRecherche ? { id: { in: idsRecherche } } : {}),
     ...(dateDebut || finDeJournee
@@ -85,7 +86,7 @@ export async function listerFactures(params: ListeFacturesParams) {
 // (pas en centimes) puisque c'est un document destiné à être lu et recalculé
 // dans un tableur, pas à repasser par le système.
 export async function exporterFacturesCsv(
-  params: Pick<ListeFacturesParams, "clientId" | "statut" | "dateDebut" | "dateFin" | "search">
+  params: Pick<ListeFacturesParams, "clientId" | "toiletteMobileId" | "statut" | "dateDebut" | "dateFin" | "search">
 ): Promise<string> {
   const where = await construireWhereFactures(params);
 
@@ -134,7 +135,7 @@ export async function exporterFacturesCsv(
 // destiné à un usage interne (comptable, direction) plutôt qu'à un import
 // dans un tableur.
 export async function exporterFacturesPDF(
-  params: Pick<ListeFacturesParams, "clientId" | "statut" | "dateDebut" | "dateFin" | "search">
+  params: Pick<ListeFacturesParams, "clientId" | "toiletteMobileId" | "statut" | "dateDebut" | "dateFin" | "search">
 ): Promise<Buffer> {
   const where = await construireWhereFactures(params);
 

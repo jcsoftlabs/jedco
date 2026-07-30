@@ -422,6 +422,13 @@ model ToiletteMobile {
   client               Client?        @relation(fields: [clientId], references: [id])
   dateDebutLocation    DateTime?
   dateFinLocation      DateTime?
+  // Tarif figé au démarrage de LA location en cours — sert de base à la
+  // facturation mensuelle automatique (genererFacturesLocationsToilettes,
+  // même schéma d'idempotence que les contrats récurrents). Null tant
+  // qu'aucune location n'est en cours, ou pour une location facturée
+  // manuellement sans automatisation.
+  tarifMensuelHTG      BigInt?
+  factures             Facture[]
   notes                String?
   deletedAt            DateTime?
   createdAt            DateTime       @default(now())
@@ -457,6 +464,12 @@ model Facture {
   intervention    Intervention?  @relation(fields: [interventionId], references: [id])
   contratId       String?
   contrat         Contrat?       @relation(fields: [contratId], references: [id])
+  // Même principe que contratId ci-dessous : une location de toilette mobile
+  // facturée automatiquement chaque mois (genererFacturesLocationsToilettes).
+  // Jamais renseigné en même temps que contratId — deux origines distinctes
+  // de facturation récurrente, jamais combinées sur une même facture.
+  toiletteMobileId String?
+  toiletteMobile  ToiletteMobile? @relation(fields: [toiletteMobileId], references: [id])
   // Période "2026-07" pour une facture récurrente de contrat mensuel — combinée
   // à contratId dans la contrainte unique ci-dessous pour garantir l'idempotence
   // du cron de facturation (§1.9) : impossible de générer deux factures pour le
@@ -481,6 +494,7 @@ model Facture {
   updatedAt       DateTime       @updatedAt
 
   @@unique([contratId, periode])
+  @@unique([toiletteMobileId, periode])
   @@index([clientId, statut, dateEcheance])
 }
 

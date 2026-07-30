@@ -46,6 +46,7 @@ export const modifierFactureSchema = z
 
 export const listeFacturesSchema = z.object({
   clientId: z.string().optional(),
+  toiletteMobileId: z.string().optional(),
   statut: statutFactureSchema.optional(),
   dateDebut: z.coerce.date().optional(),
   dateFin: z.coerce.date().optional(),

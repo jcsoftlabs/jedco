@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type Toilette = {
@@ -67,6 +68,7 @@ export default function ToilettesTable({ toilettes, clients }: { toilettes: Toil
           dateDebutLocation: fd.get("dateDebutLocation"),
           dateFinLocation: fd.get("dateFinLocation") || undefined,
           localisationActuelle: fd.get("localisationActuelle") || undefined,
+          tarifMensuelHTG: fd.get("tarifMensuelHTG") ? Number(fd.get("tarifMensuelHTG")) : undefined,
         }),
       },
       id
@@ -140,6 +142,16 @@ export default function ToilettesTable({ toilettes, clients }: { toilettes: Toil
                     ) : (
                       "—"
                     )}
+                    {/* Seul point d'entrée pour répondre à "quelles factures
+                        couvrent cette toilette ?" — sans lien structurel
+                        Facture ↔ ToiletteMobile jusqu'ici, cette question
+                        n'avait pas de réponse directe dans l'interface. */}
+                    <Link
+                      href={`/admin/factures?toiletteMobileId=${t.id}`}
+                      className="mt-1 block text-xs font-medium text-jedco hover:underline"
+                    >
+                      Voir les factures →
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -233,6 +245,20 @@ export default function ToilettesTable({ toilettes, clients }: { toilettes: Toil
                             placeholder="Adresse de livraison"
                             defaultValue={t.localisationActuelle ?? ""}
                             className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-slate-600">
+                            Tarif mensuel HTG <span className="font-normal text-slate-400">(optionnel)</span>
+                          </label>
+                          <input
+                            type="number"
+                            name="tarifMensuelHTG"
+                            min="0"
+                            step="1"
+                            placeholder="Ex : 15000"
+                            title="Renseigné, la location est facturée automatiquement chaque mois. Laissé vide, la facturation reste manuelle."
+                            className="w-36 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-jedco"
                           />
                         </div>
                         <button
